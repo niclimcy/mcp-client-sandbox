@@ -66,7 +66,9 @@ class AnthropicProvider(AIProvider):
                 # Execute tool call via provided executor
                 if tool_executor:
                     result = await tool_executor(tool_name, tool_args)
-                    final_text.append(f"[Calling tool {tool_name} with args {tool_args}]")
+                    final_text.append(
+                        f"[Calling tool {tool_name} with args {tool_args}]"
+                    )
 
                     assistant_message_content.append(content)
                     messages.append(

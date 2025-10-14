@@ -4,6 +4,7 @@ from mcp import ClientSession, StdioServerParameters, Tool
 from mcp.client.stdio import stdio_client
 from dotenv import load_dotenv
 import json
+import asyncio
 
 from providers.base import AIProvider
 from providers.google_genai import GoogleGenAIProvider
@@ -18,7 +19,7 @@ class MCPClient:
         self.exit_stack = AsyncExitStack()
         self.provider = provider or GoogleGenAIProvider()
 
-    async def register_all_servers(self, config_path: str = "servers.json"):
+    async def _register_all_servers(self, config_path: str = "servers.json"):
         """Register all servers defined in the given config file"""
 
         with open(config_path, "r", encoding="utf-8") as f:
@@ -42,7 +43,7 @@ class MCPClient:
                 if not isinstance(args, list):
                     raise ValueError(f"Server '{name}' must provide 'args' as a list")
 
-                session = await self.register_stdio_server(command, args)
+                session = await self._register_stdio_server(command, args)
                 self.sessions[name] = session
             elif server_type == "http":
                 url = config.get("url")
@@ -60,7 +61,7 @@ class MCPClient:
             for tool in response.tools:
                 print(f"- {tool.name} ({server})")
 
-    async def register_stdio_server(
+    async def _register_stdio_server(
         self, command: str, args: list[str]
     ) -> ClientSession:
         """Register a stdio server
@@ -81,7 +82,7 @@ class MCPClient:
         await session.initialize()
         return session
 
-    async def register_http_server(self, url: str) -> None:
+    async def _register_http_server(self, url: str) -> None:
         """Register an HTTP server
 
         Args:
@@ -93,7 +94,7 @@ class MCPClient:
         # TODO: Implement HTTP server registration
         pass
 
-    async def get_all_registered_tools(self) -> list[Tool]:
+    async def _get_all_registered_tools(self) -> list[Tool]:
         """Get a list of all registered tools across all sessions"""
         all_tools: list[Tool] = []
         for session in self.sessions.values():
@@ -101,7 +102,7 @@ class MCPClient:
             all_tools.extend(response.tools)
         return all_tools
 
-    async def find_registered_server_by_tool(
+    async def _find_registered_server_by_tool(
         self, tool_name: str
     ) -> Optional[ClientSession]:
         """Find a registered tool by name across all sessions"""
@@ -114,14 +115,14 @@ class MCPClient:
 
     async def _execute_tool(self, tool_name: str, tool_args: dict) -> any:
         """Execute a tool by finding its session and calling it."""
-        session = await self.find_registered_server_by_tool(tool_name)
+        session = await self._find_registered_server_by_tool(tool_name)
         if session:
             return await session.call_tool(tool_name, tool_args)
         raise ValueError(f"Tool {tool_name} not found in any registered session")
 
-    async def process_query(self, query: str) -> str:
+    async def _process_query(self, query: str) -> str:
         """Process a query using all available tools"""
-        tools = await self.get_all_registered_tools()
+        tools = await self._get_all_registered_tools()
 
         # Use the provider to process the query with tool execution
         return await self.provider.process_query(
@@ -131,18 +132,29 @@ class MCPClient:
     async def run(self):
         """Run an interactive chat loop"""
         print("\nMCP Client Started!")
-        print("Type your queries or 'quit' to exit.")
+        print("Type '/q' or use Ctrl+D to quit")
+        print("Type '/model' to switch models (not implemented yet)")
+        await self._register_all_servers()
 
         while True:
             try:
-                query = input("\nQuery: ").strip()
+                # Use asyncio.to_thread for proper cancellation support
+                query = await asyncio.to_thread(input, "\n> ")
 
-                if query.lower() == "quit":
+                if query.strip() == "/model":
+                    # TODO: Implement model switching
+                    print("Model switching not implemented yet.")
+                    continue
+                if query.strip() == "/q":
+                    print("\nExiting...")
                     break
 
-                response = await self.process_query(query)
+                response = await self._process_query(query)
                 print("\n" + response)
 
+            except EOFError:
+                print("\nExiting...")
+                break
             except Exception as e:
                 print(f"\nError: {str(e)}")
 
