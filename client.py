@@ -12,7 +12,6 @@ load_dotenv()  # load environment variables from .env
 class MCPClient:
     def __init__(self):
         # Initialize session and client objects
-        self.session: Optional[ClientSession] = None
         self.sessions: dict[str, ClientSession] = {}
         self.exit_stack = AsyncExitStack()
         self.anthropic = Anthropic()
@@ -92,23 +91,29 @@ class MCPClient:
         # TODO: Implement HTTP server registration
         pass
 
+    async def get_all_registered_tools(self):
+        """Get a list of all registered tools across all sessions"""
+        all_tools = []
+        for session in self.sessions.values():
+            response = await session.list_tools()
+            all_tools.extend(response.tools)
+        return all_tools
+
+    async def find_registered_tool_server(
+        self, tool_name: str
+    ) -> Optional[ClientSession]:
+        """Find the server session that has the specified tool registered"""
+        for session in self.sessions.values():
+            response = await session.list_tools()
+            if any(tool.name == tool_name for tool in response.tools):
+                return session
+        return None
+
     async def process_query(self, query: str) -> str:
         """Process a query using all available tools"""
         messages = [{"role": "user", "content": query}]
 
-        tools = []
-        for session in self.sessions.values():
-            response = await session.list_tools()
-            tools.append(
-                [
-                    {
-                        "name": tool.name,
-                        "description": tool.description,
-                        "input_schema": tool.inputSchema,
-                    }
-                    for tool in response.tools
-                ]
-            )
+        tools = await self.get_all_registered_tools()
 
         # Initial Claude API call
         response = self.anthropic.messages.create(
@@ -130,8 +135,14 @@ class MCPClient:
                 tool_name = content.name
                 tool_args = content.input
 
+                session = await self.find_registered_tool_server(tool_name)
+                if session is None:
+                    raise ValueError(
+                        f"Tool '{tool_name}' not found in any registered server"
+                    )
+
                 # Execute tool call
-                result = await self.session.call_tool(tool_name, tool_args)
+                result = await session.call_tool(tool_name, tool_args)
                 final_text.append(f"[Calling tool {tool_name} with args {tool_args}]")
 
                 assistant_message_content.append(content)
@@ -163,7 +174,7 @@ class MCPClient:
 
         return "\n".join(final_text)
 
-    async def chat_loop(self):
+    async def run(self):
         """Run an interactive chat loop"""
         print("\nMCP Client Started!")
         print("Type your queries or 'quit' to exit.")

@@ -6,7 +6,7 @@ async def main():
     client = MCPClient()
     try:
         await client.register_all_servers()
-        await client.chat_loop()
+        await client.run()
     finally:
         await client.cleanup()
 
