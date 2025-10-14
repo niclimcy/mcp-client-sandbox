@@ -2,6 +2,7 @@ from typing import Optional
 from contextlib import AsyncExitStack
 from mcp import ClientSession, StdioServerParameters, Tool
 from mcp.client.stdio import stdio_client
+from mcp.client.streamable_http import streamablehttp_client
 from dotenv import load_dotenv
 import json
 import asyncio
@@ -50,7 +51,8 @@ class MCPClient:
                 if not isinstance(url, str):
                     raise ValueError(f"Server '{name}' is missing a valid 'url'")
 
-                await self.register_http_server(url)
+                session = await self._register_http_server(name, url)
+                self.sessions[name] = session
             else:
                 raise ValueError(
                     f"Unsupported server type '{server_type}' for '{name}'"
@@ -82,17 +84,30 @@ class MCPClient:
         await session.initialize()
         return session
 
-    async def _register_http_server(self, url: str) -> None:
-        """Register an HTTP server
+    async def _register_http_server(self, name: str, url: str) -> ClientSession:
+        """Register an HTTP server using streamable HTTP transport
 
         Args:
-            url: URL of the HTTP server
+            name: Name identifier for the server
+            url: URL of the HTTP server (e.g., "http://localhost:8000/mcp")
         Returns:
             ClientSession connected to the server
         """
+        # Connect to a streamable HTTP server
+        http_transport = await self.exit_stack.enter_async_context(
+            streamablehttp_client(url)
+        )
+        read_stream, write_stream, _ = http_transport
 
-        # TODO: Implement HTTP server registration
-        pass
+        # Create a session using the client streams
+        session = await self.exit_stack.enter_async_context(
+            ClientSession(read_stream, write_stream)
+        )
+
+        # Initialize the connection
+        await session.initialize()
+
+        return session
 
     async def _get_all_registered_tools(self) -> list[Tool]:
         """Get a list of all registered tools across all sessions"""
