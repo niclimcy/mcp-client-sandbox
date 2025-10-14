@@ -11,3 +11,9 @@ wheels/
 
 # MCP Server configs
 servers.json
+
+# Environment variables
+.env
+
+# Ruff
+.ruff_cache/

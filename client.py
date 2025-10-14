@@ -1,20 +1,22 @@
 from typing import Optional
 from contextlib import AsyncExitStack
-from mcp import ClientSession, StdioServerParameters
+from mcp import ClientSession, StdioServerParameters, Tool
 from mcp.client.stdio import stdio_client
 from dotenv import load_dotenv
-from anthropic import Anthropic
 import json
+
+from providers.base import AIProvider
+from providers.google_genai import GoogleGenAIProvider
 
 load_dotenv()  # load environment variables from .env
 
 
 class MCPClient:
-    def __init__(self):
+    def __init__(self, provider: AIProvider | None = None):
         # Initialize session and client objects
         self.sessions: dict[str, ClientSession] = {}
         self.exit_stack = AsyncExitStack()
-        self.anthropic = Anthropic()
+        self.provider = provider or GoogleGenAIProvider()
 
     async def register_all_servers(self, config_path: str = "servers.json"):
         """Register all servers defined in the given config file"""
@@ -91,88 +93,40 @@ class MCPClient:
         # TODO: Implement HTTP server registration
         pass
 
-    async def get_all_registered_tools(self):
+    async def get_all_registered_tools(self) -> list[Tool]:
         """Get a list of all registered tools across all sessions"""
-        all_tools = []
+        all_tools: list[Tool] = []
         for session in self.sessions.values():
             response = await session.list_tools()
             all_tools.extend(response.tools)
         return all_tools
 
-    async def find_registered_tool_server(
+    async def find_registered_server_by_tool(
         self, tool_name: str
     ) -> Optional[ClientSession]:
-        """Find the server session that has the specified tool registered"""
+        """Find a registered tool by name across all sessions"""
         for session in self.sessions.values():
             response = await session.list_tools()
-            if any(tool.name == tool_name for tool in response.tools):
-                return session
+            for tool in response.tools:
+                if tool.name == tool_name:
+                    return session
         return None
+
+    async def _execute_tool(self, tool_name: str, tool_args: dict) -> any:
+        """Execute a tool by finding its session and calling it."""
+        session = await self.find_registered_server_by_tool(tool_name)
+        if session:
+            return await session.call_tool(tool_name, tool_args)
+        raise ValueError(f"Tool {tool_name} not found in any registered session")
 
     async def process_query(self, query: str) -> str:
         """Process a query using all available tools"""
-        messages = [{"role": "user", "content": query}]
-
         tools = await self.get_all_registered_tools()
 
-        # Initial Claude API call
-        response = self.anthropic.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=1000,
-            messages=messages,
-            tools=tools,
+        # Use the provider to process the query with tool execution
+        return await self.provider.process_query(
+            query=query, tools=tools, tool_executor=self._execute_tool
         )
-
-        # Process response and handle tool calls
-        final_text = []
-
-        assistant_message_content = []
-        for content in response.content:
-            if content.type == "text":
-                final_text.append(content.text)
-                assistant_message_content.append(content)
-            elif content.type == "tool_use":
-                tool_name = content.name
-                tool_args = content.input
-
-                session = await self.find_registered_tool_server(tool_name)
-                if session is None:
-                    raise ValueError(
-                        f"Tool '{tool_name}' not found in any registered server"
-                    )
-
-                # Execute tool call
-                result = await session.call_tool(tool_name, tool_args)
-                final_text.append(f"[Calling tool {tool_name} with args {tool_args}]")
-
-                assistant_message_content.append(content)
-                messages.append(
-                    {"role": "assistant", "content": assistant_message_content}
-                )
-                messages.append(
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "tool_result",
-                                "tool_use_id": content.id,
-                                "content": result.content,
-                            }
-                        ],
-                    }
-                )
-
-                # Get next response from Claude
-                response = self.anthropic.messages.create(
-                    model="claude-3-5-sonnet-20241022",
-                    max_tokens=1000,
-                    messages=messages,
-                    tools=tools,
-                )
-
-                final_text.append(response.content[0].text)
-
-        return "\n".join(final_text)
 
     async def run(self):
         """Run an interactive chat loop"""
