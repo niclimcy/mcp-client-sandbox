@@ -3,6 +3,7 @@ from contextlib import AsyncExitStack
 from mcp import ClientSession, StdioServerParameters, Tool
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
+from mcp.types import CallToolResult
 from dotenv import load_dotenv
 import json
 import asyncio
@@ -181,7 +182,9 @@ class MCPClient:
                         return session
             return None
 
-    async def _execute_tool(self, namespaced_tool_name: str, tool_args: dict) -> any:
+    async def _execute_tool(
+        self, namespaced_tool_name: str, tool_args: dict
+    ) -> CallToolResult | None:
         """Execute a tool by finding its session and calling it with the original tool name
 
         Args:

@@ -1,8 +1,9 @@
 import json
 import os
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 from mcp import Tool
+from mcp.types import CallToolResult
 from openai import OpenAI
 
 from providers.base import AIProvider
@@ -73,7 +74,7 @@ class OpenRouterProvider(AIProvider):
         query: str,
         tools: list[Tool],
         model: str | None = None,
-        tool_executor: Any = None,
+        tool_executor: Callable[[str, dict], Awaitable[CallToolResult]] | None = None,
     ) -> str:
         """
         Process a query using OpenRouter with tool support.

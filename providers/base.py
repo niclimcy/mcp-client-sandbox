@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Awaitable, Callable
+
+from mcp import Tool
+from mcp.types import CallToolResult
 
 
 class AIProvider(ABC):
@@ -19,7 +22,11 @@ class AIProvider(ABC):
 
     @abstractmethod
     async def process_query(
-        self, query: str, tools: list[Any], model: str | None = None
+        self,
+        query: str,
+        tools: list[Tool],
+        model: str | None = None,
+        tool_executor: Callable[[str, dict], Awaitable[CallToolResult]] | None = None,
     ) -> str:
         """
         Process a query using available tools.

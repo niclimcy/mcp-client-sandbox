@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 from google import genai
 from google.genai import types
 from mcp import Tool
+from mcp.types import CallToolResult
 
 from providers.base import AIProvider
 
@@ -71,7 +72,7 @@ class GoogleGenAIProvider(AIProvider):
         query: str,
         tools: list[Tool],
         model: str | None = None,
-        tool_executor: Any = None,
+        tool_executor: Callable[[str, dict], Awaitable[CallToolResult]] | None = None,
     ) -> str:
         """
         Process a query using Google GenAI with tool support.
