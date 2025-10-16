@@ -7,8 +7,9 @@ from dotenv import load_dotenv
 import json
 import asyncio
 
+from providers.anthropic import ANTHROPIC_MODELS, AnthropicProvider
 from providers.base import AIProvider
-from providers.google_genai import GoogleGenAIProvider
+from providers.google_genai import GOOGLE_GENAI_MODELS, GoogleGenAIProvider
 
 load_dotenv()  # load environment variables from .env
 
@@ -144,11 +145,75 @@ class MCPClient:
             query=query, tools=tools, tool_executor=self._execute_tool
         )
 
+    def _get_available_models(self) -> dict[str, tuple[AIProvider, str]]:
+        """
+        Get all available models from all providers.
+
+        Returns:
+            Dict mapping option number to (provider_class, model_name)
+        """
+        models = {}
+        option = 1
+
+        for model in GOOGLE_GENAI_MODELS:
+            models[option] = (GoogleGenAIProvider, model)
+            option += 1
+
+        for model in ANTHROPIC_MODELS:
+            models[option] = (AnthropicProvider, model)
+            option += 1
+
+        return models
+
+    def _display_available_models(self) -> None:
+        """Display all available models grouped by provider"""
+        print("\nAvailable models:")
+        print("\nGoogle GenAI:")
+        option = 1
+        for model in GOOGLE_GENAI_MODELS:
+            print(f"[{option}] {model}")
+            option += 1
+
+        print("\nAnthropic:")
+        for model in ANTHROPIC_MODELS:
+            print(f"[{option}] {model}")
+            option += 1
+
+    async def _switch_model(self) -> None:
+        """Handle model switching based on user input"""
+        self._display_available_models()
+
+        try:
+            # Get user input in a thread
+            choice_str = await asyncio.to_thread(input, "\nSelect model number: ")
+            choice = int(choice_str.strip())
+
+            models = self._get_available_models()
+            if choice not in models:
+                print(
+                    f"Invalid choice. Please select a number between 1 and {len(models)}"
+                )
+                return
+
+            provider_class, model_name = models[choice]
+
+            # Create new provider instance
+            self.provider = provider_class()
+            print(
+                f"\nModel switched to {model_name} ({provider_class.__name__.rstrip('Provider')})"
+            )
+
+        except ValueError:
+            print("Invalid input. Please enter a valid number.")
+        except Exception as e:
+            print(f"Error switching model: {str(e)}")
+
     async def run(self):
         """Run an interactive chat loop"""
         print("\nMCP Client Started!")
-        print("Type '/q' or use Ctrl+D to quit")
-        print("Type '/model' to switch models (not implemented yet)")
+        print(f"Current Model: {self.provider.default_model}")
+        print("\nType '/q' or use Ctrl+D to quit")
+        print("Type '/model' to switch models")
         await self._register_all_servers()
 
         while True:
@@ -157,9 +222,9 @@ class MCPClient:
                 query = await asyncio.to_thread(input, "\n> ")
 
                 if query.strip() == "/model":
-                    # TODO: Implement model switching
-                    print("Model switching not implemented yet.")
+                    await self._switch_model()
                     continue
+
                 if query.strip() == "/q":
                     print("\nExiting...")
                     break

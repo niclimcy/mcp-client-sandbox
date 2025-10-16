@@ -6,7 +6,7 @@ from mcp import Tool
 from providers.base import AIProvider
 
 
-ANTHROPIC_MODELS = ["claude-sonnet-4-5-20250929"]
+ANTHROPIC_MODELS = ["claude-haiku-4-5-20251001", "claude-sonnet-4-5-20250929"]
 
 
 class AnthropicProvider(AIProvider):
