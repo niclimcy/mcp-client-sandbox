@@ -44,20 +44,32 @@ class GoogleGenAIProvider(AIProvider):
 
         for mcp_tool in mcp_tools:
             # Convert MCP tool schema to GenAI FunctionDeclaration
+            properties = {}
+            for prop_name, prop_schema in mcp_tool.inputSchema.get(
+                "properties", {}
+            ).items():
+                prop_type = prop_schema.get("type", "STRING").upper()
+                schema_kwargs = {
+                    "type": prop_type,
+                    "description": prop_schema.get("description", ""),
+                }
+
+                # Handle array types - they need an 'items' field
+                if prop_type == "ARRAY":
+                    items_schema = prop_schema.get("items", {})
+                    schema_kwargs["items"] = types.Schema(
+                        type=items_schema.get("type", "STRING").upper(),
+                        description=items_schema.get("description", ""),
+                    )
+
+                properties[prop_name] = types.Schema(**schema_kwargs)
+
             function_declaration = types.FunctionDeclaration(
                 name=mcp_tool.name,
                 description=mcp_tool.description or "",
                 parameters=types.Schema(
                     type="OBJECT",
-                    properties={
-                        prop_name: types.Schema(
-                            type=prop_schema.get("type", "STRING").upper(),
-                            description=prop_schema.get("description", ""),
-                        )
-                        for prop_name, prop_schema in mcp_tool.inputSchema.get(
-                            "properties", {}
-                        ).items()
-                    },
+                    properties=properties,
                     required=mcp_tool.inputSchema.get("required", []),
                 ),
             )
