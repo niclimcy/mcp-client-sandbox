@@ -5,6 +5,7 @@ from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import CallToolResult
 import json
+from logger.models import ServerMetadata
 
 
 class MCPServerManager:
@@ -12,16 +13,17 @@ class MCPServerManager:
 
     def __init__(self, exit_stack: AsyncExitStack):
         """Initialize the server manager
-        
+
         Args:
             exit_stack: AsyncExitStack for managing async context managers
         """
         self.sessions: dict[str, ClientSession] = {}
+        self.server_metadata: dict[str, ServerMetadata] = {}
         self.exit_stack = exit_stack
 
     async def register_all_servers(self, config_path: str = "servers.json"):
         """Register all servers defined in the given config file
-        
+
         Args:
             config_path: Path to the servers configuration JSON file
         """
@@ -48,6 +50,13 @@ class MCPServerManager:
 
                 session = await self._register_stdio_server(command, args)
                 self.sessions[name] = session
+
+                # Store server metadata
+                self.server_metadata[name] = ServerMetadata(
+                    name=name,
+                    type="stdio",
+                    connection_details={"command": command, "args": args},
+                )
             elif server_type == "http":
                 url = config.get("url")
                 if not isinstance(url, str):
@@ -55,11 +64,16 @@ class MCPServerManager:
 
                 session = await self._register_http_server(name, url)
                 self.sessions[name] = session
+
+                # Store server metadata
+                self.server_metadata[name] = ServerMetadata(
+                    name=name, type="http", connection_details={"url": url}
+                )
             else:
                 raise ValueError(
                     f"Unsupported server type '{server_type}' for '{name}'"
                 )
-        
+
         print("\nTools Found:")
         for server, session in self.sessions.items():
             response = await session.list_tools()
@@ -211,3 +225,31 @@ class MCPServerManager:
             original_tool_name = namespaced_tool_name
 
         return await session.call_tool(original_tool_name, tool_args)
+
+    def get_server_metadata(self, server_name: str) -> ServerMetadata | None:
+        """Get metadata for a specific server.
+
+        Args:
+            server_name: Name of the server
+
+        Returns:
+            ServerMetadata object or None if server not found
+        """
+        return self.server_metadata.get(server_name)
+
+    def get_server_metadata_by_tool_name(
+        self, namespaced_tool_name: str
+    ) -> ServerMetadata | None:
+        """Get metadata for the server that provides a tool.
+
+        Args:
+            namespaced_tool_name: Tool name in format {server_name}__{tool_name}
+
+        Returns:
+            ServerMetadata object or None if server not found
+        """
+        try:
+            server_name, _ = self._parse_namespaced_tool_name(namespaced_tool_name)
+            return self.server_metadata.get(server_name)
+        except ValueError:
+            return None

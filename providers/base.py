@@ -4,6 +4,9 @@ from typing import Awaitable, Callable
 from mcp import Tool
 from mcp.types import CallToolResult
 
+from logger.base import ToolUsageLogger
+from server_manager import MCPServerManager
+
 
 class AIProvider(ABC):
     """Base class for AI providers supporting MCP tool integration."""
@@ -25,8 +28,10 @@ class AIProvider(ABC):
         self,
         query: str,
         tools: list[Tool],
+        tool_executor: Callable[[str, dict], Awaitable[CallToolResult]],
+        logger: "ToolUsageLogger",
+        server_manager: "MCPServerManager",
         model: str | None = None,
-        tool_executor: Callable[[str, dict], Awaitable[CallToolResult]] | None = None,
     ) -> str:
         """
         Process a query using available tools.
@@ -34,6 +39,9 @@ class AIProvider(ABC):
         Args:
             query: User query to process
             tools: List of available MCP tools
+            tool_executor: Callable that executes tool calls
+            logger: Logger for tracking tool usage (tracks session internally)
+            server_manager: Server manager for getting metadata
             model: Optional model name (uses default if not specified)
 
         Returns:

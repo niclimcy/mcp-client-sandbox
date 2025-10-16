@@ -17,3 +17,6 @@ servers.json
 
 # Ruff
 .ruff_cache/
+
+# Logs
+logs/

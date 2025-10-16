@@ -6,6 +6,10 @@ from mcp import Tool
 from mcp.types import CallToolResult
 
 from providers.base import AIProvider
+from logger.models import ToolCallRecord
+
+from logger.base import ToolUsageLogger
+from server_manager import MCPServerManager
 
 
 GOOGLE_GENAI_MODELS = [
@@ -83,8 +87,10 @@ class GoogleGenAIProvider(AIProvider):
         self,
         query: str,
         tools: list[Tool],
+        tool_executor: Callable[[str, dict], Awaitable[CallToolResult]],
+        logger: ToolUsageLogger,
+        server_manager: MCPServerManager,
         model: str | None = None,
-        tool_executor: Callable[[str, dict], Awaitable[CallToolResult]] | None = None,
     ) -> str:
         """
         Process a query using Google GenAI with tool support.
@@ -92,8 +98,10 @@ class GoogleGenAIProvider(AIProvider):
         Args:
             query: User query to process
             tools: List of available MCP tools
-            model: Optional model name (uses default if not specified)
             tool_executor: Callable that executes tool calls (tool_name, tool_args) -> result
+            logger: Logger for tracking tool usage
+            server_manager: Server manager for getting metadata
+            model: Optional model name (uses default if not specified)
 
         Returns:
             Final response text after processing tool calls
@@ -140,8 +148,23 @@ class GoogleGenAIProvider(AIProvider):
                 tool_name = function_call.name
                 tool_args = dict(function_call.args)
 
-                if tool_executor:
-                    # Execute the tool
+                # Create tool call record for logging
+                server_metadata = server_manager.get_server_metadata_by_tool_name(
+                    tool_name
+                )
+                if not server_metadata:
+                    raise ValueError(
+                        f"Could not find server metadata for tool: {tool_name}"
+                    )
+
+                record = ToolCallRecord.create(
+                    tool_name=tool_name,
+                    server_metadata=server_metadata,
+                    input_args=tool_args,
+                )
+
+                # Execute the tool
+                try:
                     result = await tool_executor(tool_name, tool_args)
 
                     final_text.append(
@@ -158,8 +181,23 @@ class GoogleGenAIProvider(AIProvider):
                                 result_text += content_item.text
 
                         function_response = {"result": result_text}
+
+                        # Log successful tool call
+                        record.complete(
+                            output=function_response,
+                            status="success",
+                        )
+                        await logger.log_tool_call(record)
                     except Exception as e:
                         function_response = {"error": str(e)}
+
+                        # Log error in result processing
+                        record.complete(
+                            output=None,
+                            status="error",
+                            error_message=f"Result processing error: {str(e)}",
+                        )
+                        await logger.log_tool_call(record)
 
                     # Create function response part
                     function_response_part = types.Part.from_function_response(
@@ -168,6 +206,15 @@ class GoogleGenAIProvider(AIProvider):
                     )
 
                     function_response_parts.append(function_response_part)
+                except Exception as e:
+                    # Log tool execution error
+                    record.complete(
+                        output=None,
+                        status="error",
+                        error_message=str(e),
+                    )
+                    await logger.log_tool_call(record)
+                    raise
 
             # Add all function responses to history in a single content
             if function_response_parts:

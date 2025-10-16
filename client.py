@@ -8,16 +8,24 @@ from providers.base import AIProvider
 from providers.google_genai import GOOGLE_GENAI_MODELS, GoogleGenAIProvider
 from providers.openai import OPENAI_MODELS, OpenAIProvider
 from providers.openrouter import OPENROUTER_MODELS, OpenRouterProvider
+from logger.file_logger import FileSystemLogger
+from logger.base import ToolUsageLogger
 
 load_dotenv()  # load environment variables from .env
 
 
 class MCPClient:
-    def __init__(self, provider: AIProvider | None = None):
+    def __init__(
+        self,
+        provider: AIProvider | None = None,
+        logger: ToolUsageLogger | None = None,
+    ):
         # Initialize session and client objects
         self.exit_stack = AsyncExitStack()
         self.server_manager = MCPServerManager(self.exit_stack)
         self.provider = provider or GoogleGenAIProvider()
+        self.logger = logger or FileSystemLogger()
+        self.current_session_id: str | None = None
 
     async def _process_query(self, query: str) -> str:
         """Process a query using all available tools"""
@@ -25,7 +33,11 @@ class MCPClient:
 
         # Use the provider to process the query with tool execution
         return await self.provider.process_query(
-            query=query, tools=tools, tool_executor=self.server_manager.execute_tool
+            query=query,
+            tools=tools,
+            tool_executor=self.server_manager.execute_tool,
+            logger=self.logger,
+            server_manager=self.server_manager,
         )
 
     def _get_available_models(
@@ -154,29 +166,43 @@ class MCPClient:
         print(f"Current Model: {self.provider.default_model}")
         print("\nType '/q' or use Ctrl+D to quit")
         print("Type '/model' to switch models")
+
+        # Start logging session
+        provider_name = self.provider.__class__.__name__
+        self.current_session_id = await self.logger.start_session(
+            provider_used=provider_name
+        )
+        print(f"Logging session started: {self.current_session_id}")
+
         await self.server_manager.register_all_servers()
 
-        while True:
-            try:
-                # Use asyncio.to_thread for proper cancellation support
-                query = await asyncio.to_thread(input, "\n> ")
+        try:
+            while True:
+                try:
+                    # Use asyncio.to_thread for proper cancellation support
+                    query = await asyncio.to_thread(input, "\n> ")
 
-                if query.strip() == "/model":
-                    await self._switch_model()
-                    continue
+                    if query.strip() == "/model":
+                        await self._switch_model()
+                        continue
 
-                if query.strip() == "/q":
+                    if query.strip() == "/q":
+                        print("\nExiting...")
+                        break
+
+                    response = await self._process_query(query)
+                    print("\n" + response)
+
+                except EOFError:
                     print("\nExiting...")
                     break
-
-                response = await self._process_query(query)
-                print("\n" + response)
-
-            except EOFError:
-                print("\nExiting...")
-                break
-            except Exception as e:
-                print(f"\nError: {str(e)}")
+                except Exception as e:
+                    print(f"\nError: {str(e)}")
+        finally:
+            # End logging session
+            if self.current_session_id:
+                await self.logger.end_session(self.current_session_id)
+                print(f"Logs saved to: logs/session_{self.current_session_id}.json")
 
     async def cleanup(self):
         """Clean up resources"""

@@ -10,6 +10,9 @@ from openai.types.chat.chat_completion_tool_union_param import (
 )
 
 from providers.base import AIProvider
+from logger.models import ToolCallRecord
+from logger.base import ToolUsageLogger
+from server_manager import MCPServerManager
 
 
 # OpenRouter doesn't have a fixed list of models - users can specify any model available on the platform
@@ -76,8 +79,10 @@ class OpenRouterProvider(AIProvider):
         self,
         query: str,
         tools: list[Tool],
+        tool_executor: Callable[[str, dict], Awaitable[CallToolResult]],
+        logger: ToolUsageLogger,
+        server_manager: MCPServerManager,
         model: str | None = None,
-        tool_executor: Callable[[str, dict], Awaitable[CallToolResult]] | None = None,
     ) -> str:
         """
         Process a query using OpenRouter with tool support.
@@ -85,8 +90,10 @@ class OpenRouterProvider(AIProvider):
         Args:
             query: User query to process
             tools: List of available MCP tools
-            model: Optional model name (uses default if not specified)
             tool_executor: Callable that executes tool calls (tool_name, tool_args) -> result
+            logger: Logger for tracking tool usage
+            server_manager: Server manager for getting metadata
+            model: Optional model name (uses default if not specified)
 
         Returns:
             Final response text after processing tool calls
@@ -128,8 +135,23 @@ class OpenRouterProvider(AIProvider):
                     tool_name = tool_call.function.name
                     tool_args = json.loads(tool_call.function.arguments)
 
-                    if tool_executor:
-                        # Execute the tool
+                    # Create tool call record for logging
+                    server_metadata = server_manager.get_server_metadata_by_tool_name(
+                        tool_name
+                    )
+                    if not server_metadata:
+                        raise ValueError(
+                            f"Could not find server metadata for tool: {tool_name}"
+                        )
+
+                    record = ToolCallRecord.create(
+                        tool_name=tool_name,
+                        server_metadata=server_metadata,
+                        input_args=tool_args,
+                    )
+
+                    # Execute the tool
+                    try:
                         result = await tool_executor(tool_name, tool_args)
 
                         final_text.append(
@@ -146,8 +168,23 @@ class OpenRouterProvider(AIProvider):
                                     result_text += content_item.text
 
                             tool_response = result_text
+
+                            # Log successful tool call
+                            record.complete(
+                                output={"result": tool_response},
+                                status="success",
+                            )
+                            await logger.log_tool_call(record)
                         except Exception as e:
                             tool_response = str(e)
+
+                            # Log error in result processing
+                            record.complete(
+                                output=None,
+                                status="error",
+                                error_message=f"Result processing error: {str(e)}",
+                            )
+                            await logger.log_tool_call(record)
 
                         # Add tool response to messages
                         messages.append(
@@ -157,6 +194,15 @@ class OpenRouterProvider(AIProvider):
                                 "content": tool_response,
                             }
                         )
+                    except Exception as e:
+                        # Log tool execution error
+                        record.complete(
+                            output=None,
+                            status="error",
+                            error_message=str(e),
+                        )
+                        await logger.log_tool_call(record)
+                        raise
 
                 # Get next response from OpenAI with tool results
                 response = self.client.chat.completions.create(
