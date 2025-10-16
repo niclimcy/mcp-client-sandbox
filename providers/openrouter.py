@@ -1,10 +1,13 @@
 import json
 import os
-from typing import Any, Awaitable, Callable
+from typing import Awaitable, Callable, Iterable
 
 from mcp import Tool
 from mcp.types import CallToolResult
 from openai import OpenAI
+from openai.types.chat.chat_completion_tool_union_param import (
+    ChatCompletionToolUnionParam,
+)
 
 from providers.base import AIProvider
 
@@ -16,7 +19,7 @@ OPENROUTER_MODELS: list[str] = []
 class OpenRouterProvider(AIProvider):
     """OpenRouter provider implementation using OpenAI SDK."""
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, **kwargs) -> None:
         """Initialize OpenRouter provider."""
         # Get API key from environment variable
         api_key = kwargs.pop("api_key", None) or os.getenv("OPENROUTER_API_KEY")
@@ -39,7 +42,7 @@ class OpenRouterProvider(AIProvider):
 
     def _convert_mcp_tools_to_openai_tools(
         self, mcp_tools: list[Tool]
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Iterable[ChatCompletionToolUnionParam]]]:
         """
         Convert MCP tools to OpenAI tool format.
 

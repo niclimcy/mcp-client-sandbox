@@ -1,4 +1,4 @@
-from typing import Any, Awaitable, Callable
+from typing import Awaitable, Callable
 
 from google import genai
 from google.genai import types
@@ -19,7 +19,7 @@ GOOGLE_GENAI_MODELS = [
 class GoogleGenAIProvider(AIProvider):
     """Google Generative AI provider implementation."""
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, **kwargs) -> None:
         """Initialize Google GenAI provider."""
         self.client = genai.Client(**kwargs)
         self.default_model = GOOGLE_GENAI_MODELS[0]  # gemini-2.5-flash-lite

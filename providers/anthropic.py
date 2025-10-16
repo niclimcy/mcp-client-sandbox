@@ -1,4 +1,4 @@
-from typing import Any, Awaitable, Callable
+from typing import Awaitable, Callable
 
 from anthropic import Anthropic
 from mcp import Tool
@@ -13,7 +13,7 @@ ANTHROPIC_MODELS = ["claude-haiku-4-5-20251001", "claude-sonnet-4-5-20250929"]
 class AnthropicProvider(AIProvider):
     """Anthropic Claude AI provider implementation."""
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, **kwargs) -> None:
         """Initialize Anthropic provider."""
         self.client = Anthropic(**kwargs)
         self.default_model = ANTHROPIC_MODELS[0]

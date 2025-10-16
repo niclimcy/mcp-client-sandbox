@@ -1,9 +1,12 @@
 import json
-from typing import Any, Awaitable, Callable
+from typing import Awaitable, Callable, Iterable
 
 from mcp import Tool
 from mcp.types import CallToolResult
 from openai import OpenAI
+from openai.types.chat.chat_completion_tool_union_param import (
+    ChatCompletionToolUnionParam,
+)
 
 from providers.base import AIProvider
 
@@ -19,7 +22,7 @@ OPENAI_MODELS = [
 class OpenAIProvider(AIProvider):
     """OpenAI provider implementation."""
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, **kwargs) -> None:
         """Initialize OpenAI provider."""
         self.client = OpenAI(**kwargs)
         self.default_model = OPENAI_MODELS[0]  # gpt-4.1
@@ -30,7 +33,7 @@ class OpenAIProvider(AIProvider):
 
     def _convert_mcp_tools_to_openai_tools(
         self, mcp_tools: list[Tool]
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Iterable[ChatCompletionToolUnionParam]]]:
         """
         Convert MCP tools to OpenAI tool format.
 

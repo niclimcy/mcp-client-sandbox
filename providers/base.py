@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Awaitable, Callable
+from typing import Awaitable, Callable
 
 from mcp import Tool
 from mcp.types import CallToolResult
@@ -11,7 +11,7 @@ class AIProvider(ABC):
     default_model: str
 
     @abstractmethod
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, **kwargs) -> None:
         """Initialize the AI provider with necessary credentials and configuration."""
         pass
 
