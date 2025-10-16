@@ -1,10 +1,10 @@
 """Data models for tool usage logging."""
 
+import json
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
-import json
-import uuid
 
 
 @dataclass

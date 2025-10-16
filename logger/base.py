@@ -1,6 +1,7 @@
 """Abstract base class for tool usage loggers."""
 
 from abc import ABC, abstractmethod
+
 from logger.models import ToolCallRecord, ToolCallSession
 
 

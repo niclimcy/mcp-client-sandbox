@@ -5,9 +5,10 @@ Pretty print MCP client logs and tool call records.
 
 import json
 import sys
-from pathlib import Path
 from datetime import datetime
-from logger.models import ToolCallSession, ToolCallRecord, ServerMetadata
+from pathlib import Path
+
+from logger.models import ServerMetadata, ToolCallRecord, ToolCallSession
 
 TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
 

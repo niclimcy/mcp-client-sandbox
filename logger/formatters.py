@@ -1,6 +1,7 @@
 """Utility functions for formatting log output."""
 
 import json
+
 from logger.models import ToolCallRecord, ToolCallSession
 
 

@@ -1,17 +1,13 @@
 from typing import Awaitable, Callable
 
 from anthropic import Anthropic
-
 from mcp import Tool
 from mcp.types import CallToolResult
 
-from providers.base import AIProvider
-
 from logger.base import ToolUsageLogger
 from logger.models import ToolCallRecord
-
+from providers.base import AIProvider
 from server_manager import MCPServerManager
-
 
 ANTHROPIC_MODELS = ["claude-haiku-4-5-20251001", "claude-sonnet-4-5-20250929"]
 

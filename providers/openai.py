@@ -8,11 +8,10 @@ from openai.types.chat.chat_completion_tool_union_param import (
     ChatCompletionToolUnionParam,
 )
 
-from providers.base import AIProvider
-from logger.models import ToolCallRecord
 from logger.base import ToolUsageLogger
+from logger.models import ToolCallRecord
+from providers.base import AIProvider
 from server_manager import MCPServerManager
-
 
 OPENAI_MODELS = [
     "gpt-4.1",

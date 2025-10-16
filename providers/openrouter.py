@@ -9,11 +9,10 @@ from openai.types.chat.chat_completion_tool_union_param import (
     ChatCompletionToolUnionParam,
 )
 
-from providers.base import AIProvider
-from logger.models import ToolCallRecord
 from logger.base import ToolUsageLogger
+from logger.models import ToolCallRecord
+from providers.base import AIProvider
 from server_manager import MCPServerManager
-
 
 # OpenRouter doesn't have a fixed list of models - users can specify any model available on the platform
 OPENROUTER_MODELS: list[str] = []
