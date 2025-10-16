@@ -7,7 +7,12 @@ from mcp import Tool
 from providers.base import AIProvider
 
 
-GOOGLE_GENAI_MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro"]
+GOOGLE_GENAI_MODELS = [
+    "gemini-flash-lite-latest",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+]
 
 
 class GoogleGenAIProvider(AIProvider):

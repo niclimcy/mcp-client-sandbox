@@ -62,7 +62,8 @@ class MCPClient:
         for server, session in self.sessions.items():
             response = await session.list_tools()
             for tool in response.tools:
-                print(f"- {tool.name} ({server})")
+                namespaced_name = f"{server}__{tool.name}"
+                print(f"- {namespaced_name}")
 
     async def _register_stdio_server(
         self, command: str, args: list[str]
@@ -111,30 +112,102 @@ class MCPClient:
         return session
 
     async def _get_all_registered_tools(self) -> list[Tool]:
-        """Get a list of all registered tools across all sessions"""
-        all_tools: list[Tool] = []
-        for session in self.sessions.values():
-            response = await session.list_tools()
-            all_tools.extend(response.tools)
-        return all_tools
+        """Get a list of all registered tools across all sessions with namespaced names
 
-    async def _find_registered_server_by_tool(
-        self, tool_name: str
-    ) -> Optional[ClientSession]:
-        """Find a registered tool by name across all sessions"""
-        for session in self.sessions.values():
+        Tools are renamed to include the server name to avoid conflicts:
+        Format: {server_name}__{original_tool_name}
+        Example: weather__get_forecast, database__query
+        """
+        all_tools: list[Tool] = []
+        for server_name, session in self.sessions.items():
             response = await session.list_tools()
             for tool in response.tools:
-                if tool.name == tool_name:
-                    return session
-        return None
+                # Create a new tool with namespaced name
+                # Store original name in description for reference
+                namespaced_tool = Tool(
+                    name=f"{server_name}__{tool.name}",
+                    description=f"[{server_name}] {tool.description or ''}".strip(),
+                    inputSchema=tool.inputSchema,
+                )
+                all_tools.append(namespaced_tool)
+        return all_tools
 
-    async def _execute_tool(self, tool_name: str, tool_args: dict) -> any:
-        """Execute a tool by finding its session and calling it."""
-        session = await self._find_registered_server_by_tool(tool_name)
-        if session:
-            return await session.call_tool(tool_name, tool_args)
-        raise ValueError(f"Tool {tool_name} not found in any registered session")
+    def _parse_namespaced_tool_name(self, namespaced_name: str) -> tuple[str, str]:
+        """Parse a namespaced tool name into server name and original tool name
+
+        Args:
+            namespaced_name: Tool name in format {server_name}__{tool_name}
+
+        Returns:
+            Tuple of (server_name, original_tool_name)
+
+        Raises:
+            ValueError: If the tool name is not properly namespaced
+        """
+        if "__" not in namespaced_name:
+            raise ValueError(
+                f"Tool name '{namespaced_name}' is not properly namespaced. "
+                f"Expected format: {{server_name}}__{{tool_name}}"
+            )
+
+        parts = namespaced_name.split("__", 1)
+        if len(parts) != 2:
+            raise ValueError(f"Invalid namespaced tool name: {namespaced_name}")
+
+        return parts[0], parts[1]
+
+    async def _find_registered_server_by_tool(
+        self, namespaced_tool_name: str
+    ) -> Optional[ClientSession]:
+        """Find a registered server by namespaced tool name
+
+        Args:
+            namespaced_tool_name: Tool name in format {server_name}__{tool_name}
+
+        Returns:
+            ClientSession for the server, or None if not found
+        """
+        try:
+            server_name, _ = self._parse_namespaced_tool_name(namespaced_tool_name)
+            return self.sessions.get(server_name)
+        except ValueError:
+            # Try to find by original name (backward compatibility)
+            for session in self.sessions.values():
+                response = await session.list_tools()
+                for tool in response.tools:
+                    if tool.name == namespaced_tool_name:
+                        return session
+            return None
+
+    async def _execute_tool(self, namespaced_tool_name: str, tool_args: dict) -> any:
+        """Execute a tool by finding its session and calling it with the original tool name
+
+        Args:
+            namespaced_tool_name: Tool name in format {server_name}__{tool_name}
+            tool_args: Arguments to pass to the tool
+
+        Returns:
+            Result from the tool execution
+
+        Raises:
+            ValueError: If the tool or server is not found
+        """
+        session = await self._find_registered_server_by_tool(namespaced_tool_name)
+        if not session:
+            raise ValueError(
+                f"Tool '{namespaced_tool_name}' not found in any registered session"
+            )
+
+        # Extract the original tool name to call on the server
+        try:
+            _, original_tool_name = self._parse_namespaced_tool_name(
+                namespaced_tool_name
+            )
+        except ValueError:
+            # Fallback for non-namespaced names (backward compatibility)
+            original_tool_name = namespaced_tool_name
+
+        return await session.call_tool(original_tool_name, tool_args)
 
     async def _process_query(self, query: str) -> str:
         """Process a query using all available tools"""
@@ -199,9 +272,7 @@ class MCPClient:
 
             # Create new provider instance
             self.provider = provider_class()
-            print(
-                f"\nModel switched to {model_name} ({provider_class.__name__.rstrip('Provider')})"
-            )
+            print(f"\nModel switched to {model_name} ({provider_class.__name__})")
 
         except ValueError:
             print("Invalid input. Please enter a valid number.")
@@ -211,8 +282,7 @@ class MCPClient:
     async def run(self):
         """Run an interactive chat loop"""
         print("\nMCP Client Started!")
-        print(f"Current Model: {self.provider.default_model}")
-        print("\nType '/q' or use Ctrl+D to quit")
+        print("Type '/q' or use Ctrl+D to quit")
         print("Type '/model' to switch models")
         await self._register_all_servers()
 
