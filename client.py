@@ -10,6 +10,8 @@ import asyncio
 from providers.anthropic import ANTHROPIC_MODELS, AnthropicProvider
 from providers.base import AIProvider
 from providers.google_genai import GOOGLE_GENAI_MODELS, GoogleGenAIProvider
+from providers.openai import OPENAI_MODELS, OpenAIProvider
+from providers.openrouter import OPENROUTER_MODELS, OpenRouterProvider
 
 load_dotenv()  # load environment variables from .env
 
@@ -218,39 +220,80 @@ class MCPClient:
             query=query, tools=tools, tool_executor=self._execute_tool
         )
 
-    def _get_available_models(self) -> dict[str, tuple[AIProvider, str]]:
+    def _get_available_models(
+        self,
+    ) -> dict[int, tuple[type[AIProvider], str] | tuple[type[AIProvider], None]]:
         """
         Get all available models from all providers.
 
         Returns:
-            Dict mapping option number to (provider_class, model_name)
+            Dict mapping option number to (provider_class, model_name) or (provider_class, None) for custom
         """
         models = {}
         option = 1
 
+        # Google GenAI models
         for model in GOOGLE_GENAI_MODELS:
             models[option] = (GoogleGenAIProvider, model)
             option += 1
+        models[option] = (GoogleGenAIProvider, None)  # Custom model option
+        option += 1
 
+        # Anthropic models
         for model in ANTHROPIC_MODELS:
             models[option] = (AnthropicProvider, model)
             option += 1
+        models[option] = (AnthropicProvider, None)  # Custom model option
+        option += 1
+
+        # OpenAI models
+        for model in OPENAI_MODELS:
+            models[option] = (OpenAIProvider, model)
+            option += 1
+        models[option] = (OpenAIProvider, None)  # Custom model option
+        option += 1
+
+        # OpenRouter models (typically just custom)
+        for model in OPENROUTER_MODELS:
+            models[option] = (OpenRouterProvider, model)
+            option += 1
+        models[option] = (OpenRouterProvider, None)  # Custom model option
+        option += 1
 
         return models
 
     def _display_available_models(self) -> None:
         """Display all available models grouped by provider"""
         print("\nAvailable models:")
-        print("\nGoogle GenAI:")
         option = 1
+
+        print("\nGoogle GenAI:")
         for model in GOOGLE_GENAI_MODELS:
             print(f"[{option}] {model}")
             option += 1
+        print(f"[{option}] Custom model (enter model string)")
+        option += 1
 
         print("\nAnthropic:")
         for model in ANTHROPIC_MODELS:
             print(f"[{option}] {model}")
             option += 1
+        print(f"[{option}] Custom model (enter model string)")
+        option += 1
+
+        print("\nOpenAI:")
+        for model in OPENAI_MODELS:
+            print(f"[{option}] {model}")
+            option += 1
+        print(f"[{option}] Custom model (enter model string)")
+        option += 1
+
+        print("\nOpenRouter:")
+        for model in OPENROUTER_MODELS:
+            print(f"[{option}] {model}")
+            option += 1
+        print(f"[{option}] Custom model (enter model string)")
+        option += 1
 
     async def _switch_model(self) -> None:
         """Handle model switching based on user input"""
@@ -262,6 +305,7 @@ class MCPClient:
             choice = int(choice_str.strip())
 
             models = self._get_available_models()
+
             if choice not in models:
                 print(
                     f"Invalid choice. Please select a number between 1 and {len(models)}"
@@ -270,9 +314,26 @@ class MCPClient:
 
             provider_class, model_name = models[choice]
 
-            # Create new provider instance
+            # If model_name is None, it's a custom model option
+            if model_name is None:
+                # Prompt for custom model string
+                provider_name = provider_class.__name__.replace("Provider", "")
+
+                prompt = f"Enter custom {provider_name} model string: "
+
+                model_name = await asyncio.to_thread(input, prompt)
+                model_name = model_name.strip()
+
+                if not model_name:
+                    print("Model name cannot be empty.")
+                    return
+
+            # Create new provider instance and set model
             self.provider = provider_class()
-            print(f"\nModel switched to {model_name} ({provider_class.__name__})")
+            self.provider.default_model = model_name
+            print(
+                f"\nModel switched to {model_name} ({provider_class.__name__.rstrip('Provider')})"
+            )
 
         except ValueError:
             print("Invalid input. Please enter a valid number.")
@@ -282,7 +343,8 @@ class MCPClient:
     async def run(self):
         """Run an interactive chat loop"""
         print("\nMCP Client Started!")
-        print("Type '/q' or use Ctrl+D to quit")
+        print(f"Current Model: {self.provider.default_model}")
+        print("\nType '/q' or use Ctrl+D to quit")
         print("Type '/model' to switch models")
         await self._register_all_servers()
 

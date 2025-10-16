@@ -5,6 +5,8 @@ from typing import Any
 class AIProvider(ABC):
     """Base class for AI providers supporting MCP tool integration."""
 
+    default_model: str
+
     @abstractmethod
     def __init__(self, **kwargs: Any) -> None:
         """Initialize the AI provider with necessary credentials and configuration."""
