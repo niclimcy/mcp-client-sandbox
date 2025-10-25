@@ -225,21 +225,45 @@ class MCPClient:
             
             await self._auto_switch_model(model_choice, model_string)
             print(f"Current Model: {self.provider.default_model}")
+            
+            # Start logging session
+            provider_name = self.provider.__class__.__name__
+            self.current_session_id = await self.logger.start_session(
+                provider_used=provider_name
+            )
+            print(f"Logging session started: {self.current_session_id}")
 
-            # --- Test Mode Execution (Placeholder for now) ---
-            print("\nExecuting test logic...")
+            try:
+                print("\nExecuting test logic...")
+                prompts = self.test_data.get('prompts', [])
+                
+                print(f"Total prompts to run: {len(prompts)}")
+                
+                if not prompts:
+                    print("⚠️ WARNING: No prompts found in test data.")
+                    # TODO: Consider throwing exception so that the finally block executes and can end logging session.
+                    return # Exit run if no prompts
+
+                for i, query in enumerate(prompts):
+                    print(f"\n[TEST PROMPT {i+1}/{len(prompts)}]: {query[:80]}...") 
+                    
+                    try:
+                        response = await self._process_query(query)
+                        
+                        print("\n[RESPONSE]:")
+                        print(response)
+                        
+                    except Exception as e:
+                        print(f"🔥 ERROR: Failed to process test prompt {i+1}. Error: {str(e)}")
+                        # Continue to the next prompt, don't break the whole test run
+
+            finally:
+                # End logging session
+                if self.current_session_id:
+                    await self.logger.end_session(self.current_session_id)
+                    print(f"\nTest run complete. Logs saved to: logs/session_{self.current_session_id}.json")
             
-            # The original interactive loop is skipped in test mode.
-            # TODO: implement the test execution logic here later.
-            
-            # For now, just print the prompts that would be run
-            prompts = self.test_data.get('prompts', [])
-            print(f"Prompts to run: {len(prompts)}")
-            for i, prompt in enumerate(prompts):
-                print(f"Prompt {i+1}: {prompt[:80]}...") # Print first 80 chars
-            
-            # The run method will exit after printing the prompts for now.
-            return
+            return # Exit the run method after the test is complete
 
         # --- Standard Interactive Mode ---
         else:
