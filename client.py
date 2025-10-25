@@ -218,6 +218,20 @@ class MCPClient:
 
         await self.server_manager.register_all_servers()
 
+        # Start logging session
+        provider_name = self.provider.__class__.__name__
+        self.current_session_id = await self.logger.start_session(
+            provider_used=provider_name
+        )
+        print(f"Logging session started: {self.current_session_id}")
+
+        async def _log_cleanup():
+            """Ends the logging session and prints the log path."""
+            if self.current_session_id:
+                context_message = "Test run complete. " if self.is_test_mode else ""
+                await self.logger.end_session(self.current_session_id)
+                print(f"\n{context_message}Logs saved to: logs/session_{self.current_session_id}.json")
+
         # --- Test Mode ---
         if self.is_test_mode and self.test_data and 'model' in self.test_data:
             model_choice = self.test_data.get('model')
@@ -226,12 +240,6 @@ class MCPClient:
             await self._auto_switch_model(model_choice, model_string)
             print(f"Current Model: {self.provider.default_model}")
             
-            # Start logging session
-            provider_name = self.provider.__class__.__name__
-            self.current_session_id = await self.logger.start_session(
-                provider_used=provider_name
-            )
-            print(f"Logging session started: {self.current_session_id}")
 
             try:
                 print("\nExecuting test logic...")
@@ -258,10 +266,7 @@ class MCPClient:
                         # Continue to the next prompt, don't break the whole test run
 
             finally:
-                # End logging session
-                if self.current_session_id:
-                    await self.logger.end_session(self.current_session_id)
-                    print(f"\nTest run complete. Logs saved to: logs/session_{self.current_session_id}.json")
+                await _log_cleanup()
             
             return # Exit the run method after the test is complete
 
@@ -271,13 +276,6 @@ class MCPClient:
             print("\nType '/q' or use Ctrl+D to quit")
             print("Type '/model' to switch models")
 
-            # Start logging session
-            provider_name = self.provider.__class__.__name__
-            self.current_session_id = await self.logger.start_session(
-                provider_used=provider_name
-            )
-            print(f"Logging session started: {self.current_session_id}")
-            
             try:
                 while True:
                     try:
@@ -301,10 +299,7 @@ class MCPClient:
                     except Exception as e:
                         print(f"\nError: {str(e)}")
             finally:
-                # End logging session
-                if self.current_session_id:
-                    await self.logger.end_session(self.current_session_id)
-                    print(f"Logs saved to: logs/session_{self.current_session_id}.json")
+                await _log_cleanup()
 
     async def cleanup(self):
         """Clean up resources"""
