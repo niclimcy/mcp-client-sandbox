@@ -126,9 +126,39 @@ class MCPClient:
             option += 1
         print(f"[{option}] Custom model (enter model string)")
         option += 1
+    
+
+    async def _auto_switch_model(self, choice: int, model_string: str | None = None) -> None:
+        """
+        Automatically switch model based on an integer choice and optional custom string.
+        Used for test mode initialization.
+        """
+        models = self._get_available_models()
+
+        if choice not in models:
+            print(f"\n⚠️ WARNING: Invalid model choice '{choice}' found in test data. Using default model.")
+            return
+
+        provider_class, model_name = models[choice]
+
+        if model_name is None:
+            final_model_name = model_string.strip() if model_string else None
+            
+            if not final_model_name:
+                print(f"\n⚠️ WARNING: Model choice '{choice}' is custom, but 'model_string' is empty. Using default model.")
+                return
+        else:
+            final_model_name = model_name
+
+        self.provider = provider_class()
+        self.provider.default_model = final_model_name
+        print(
+            f"\nModel switched to {final_model_name} ({provider_class.__name__.rstrip('Provider')}) via test data."
+        )
+
 
     async def _switch_model(self) -> None:
-        """Handle model switching based on user input"""
+        """Handle model switching based on user input (interactive mode)"""
         self._display_available_models()
 
         try:
@@ -188,33 +218,69 @@ class MCPClient:
 
         await self.server_manager.register_all_servers()
 
-        try:
-            while True:
-                try:
-                    # Use asyncio.to_thread for proper cancellation support
-                    query = await asyncio.to_thread(input, "\n> ")
+        # --- Test Mode ---
+        if self.is_test_mode and self.test_data and 'model' in self.test_data:
+            model_choice = self.test_data.get('model')
+            model_string = self.test_data.get('model_string', "")
+            
+            await self._auto_switch_model(model_choice, model_string)
+            print(f"Current Model: {self.provider.default_model}")
 
-                    if query.strip() == "/model":
-                        await self._switch_model()
-                        continue
+            # --- Test Mode Execution (Placeholder for now) ---
+            print("\nExecuting test logic...")
+            
+            # The original interactive loop is skipped in test mode.
+            # TODO: implement the test execution logic here later.
+            
+            # For now, just print the prompts that would be run
+            prompts = self.test_data.get('prompts', [])
+            print(f"Prompts to run: {len(prompts)}")
+            for i, prompt in enumerate(prompts):
+                print(f"Prompt {i+1}: {prompt[:80]}...") # Print first 80 chars
+            
+            # The run method will exit after printing the prompts for now.
+            return
 
-                    if query.strip() == "/q":
+        # --- Standard Interactive Mode ---
+        else:
+            print(f"Current Model: {self.provider.default_model}")
+            print("\nType '/q' or use Ctrl+D to quit")
+            print("Type '/model' to switch models")
+
+            # Start logging session
+            provider_name = self.provider.__class__.__name__
+            self.current_session_id = await self.logger.start_session(
+                provider_used=provider_name
+            )
+            print(f"Logging session started: {self.current_session_id}")
+            
+            try:
+                while True:
+                    try:
+                        # Use asyncio.to_thread for proper cancellation support
+                        query = await asyncio.to_thread(input, "\n> ")
+
+                        if query.strip() == "/model":
+                            await self._switch_model()
+                            continue
+
+                        if query.strip() == "/q":
+                            print("\nExiting...")
+                            break
+
+                        response = await self._process_query(query)
+                        print("\n" + response)
+
+                    except EOFError:
                         print("\nExiting...")
                         break
-
-                    response = await self._process_query(query)
-                    print("\n" + response)
-
-                except EOFError:
-                    print("\nExiting...")
-                    break
-                except Exception as e:
-                    print(f"\nError: {str(e)}")
-        finally:
-            # End logging session
-            if self.current_session_id:
-                await self.logger.end_session(self.current_session_id)
-                print(f"Logs saved to: logs/session_{self.current_session_id}.json")
+                    except Exception as e:
+                        print(f"\nError: {str(e)}")
+            finally:
+                # End logging session
+                if self.current_session_id:
+                    await self.logger.end_session(self.current_session_id)
+                    print(f"Logs saved to: logs/session_{self.current_session_id}.json")
 
     async def cleanup(self):
         """Clean up resources"""
