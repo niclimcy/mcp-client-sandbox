@@ -20,6 +20,9 @@ class MCPClient:
         self,
         provider: AIProvider | None = None,
         logger: ToolUsageLogger | None = None,
+        # testing parameters. Leave empty to run as default mode
+        is_test_mode: bool = False,
+        test_data: dict | None = None,
     ):
         # Initialize session and client objects
         self.exit_stack = AsyncExitStack()
@@ -27,6 +30,14 @@ class MCPClient:
         self.provider = provider or GoogleGenAIProvider()
         self.logger = logger or FileSystemLogger()
         self.current_session_id: str | None = None
+
+        self.is_test_mode = is_test_mode
+        self.test_data = test_data
+
+        if self.is_test_mode and self.test_data:
+            print("MCPClient initialized in TEST MODE with loaded data.")
+        else:
+            self.is_test_mode = False # Set back to false if no data found.
 
     async def _process_query(self, query: str) -> str:
         """Process a query using all available tools"""
