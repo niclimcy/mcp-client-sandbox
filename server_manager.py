@@ -1,6 +1,9 @@
 import json
 from contextlib import AsyncExitStack
 from typing import Optional
+import os
+from dotenv import load_dotenv
+import re
 
 from mcp import ClientSession, StdioServerParameters, Tool
 from mcp.client.stdio import stdio_client
@@ -29,8 +32,29 @@ class MCPServerManager:
         Args:
             config_path: Path to the servers configuration JSON file
         """
+        load_dotenv()
         with open(config_path, "r", encoding="utf-8") as f:
             data = json.load(f)
+        
+        # Replace ${VAR_NAME} in all string fields recursively
+        def substitute_env_vars(obj):
+            if isinstance(obj, dict):
+                return {k: substitute_env_vars(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [substitute_env_vars(i) for i in obj]
+            elif isinstance(obj, str):
+                # repeatedly expand until no ${VAR} left (handles nested)
+                pattern = re.compile(r"\$\{([^}]+)\}")
+                expanded = obj
+                prev = None
+                while prev != expanded:
+                    prev = expanded
+                    expanded = pattern.sub(lambda m: os.getenv(m.group(1), ""), expanded)
+                return expanded
+            else:
+                return obj
+
+        data = substitute_env_vars(data)
 
         servers = data.get("servers")
         if not isinstance(servers, dict):
