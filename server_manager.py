@@ -43,7 +43,14 @@ class MCPServerManager:
             elif isinstance(obj, list):
                 return [substitute_env_vars(i) for i in obj]
             elif isinstance(obj, str):
-                return re.sub(r"\$\{([^}]+)\}", lambda m: os.getenv(m.group(1), ""), obj)
+                # repeatedly expand until no ${VAR} left (handles nested)
+                pattern = re.compile(r"\$\{([^}]+)\}")
+                expanded = obj
+                prev = None
+                while prev != expanded:
+                    prev = expanded
+                    expanded = pattern.sub(lambda m: os.getenv(m.group(1), ""), expanded)
+                return expanded
             else:
                 return obj
 
