@@ -216,7 +216,10 @@ class MCPClient:
         )
         print(f"Logging session started: {self.current_session_id}")
 
-        await self.server_manager.register_all_servers()
+        if self.is_test_mode and self.test_data and '__filepath' in self.test_data:
+            await self.server_manager.register_all_servers(config_path=self.test_data["__filepath"])
+        else:
+            await self.server_manager.register_all_servers()
 
         # Start logging session
         provider_name = self.provider.__class__.__name__

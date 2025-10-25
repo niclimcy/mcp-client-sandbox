@@ -46,6 +46,7 @@ async def main(is_test_mode: bool, test_names: list[str] | None):
             try:
                 with open(filepath, 'r') as f:
                     test_data = json.load(f)
+                test_data['__filepath'] = str(filepath.absolute())
                 
                 print(f"✅ Success: Loaded test data for '{name}'.")
                 test_data_to_run.append(test_data)
