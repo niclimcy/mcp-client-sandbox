@@ -68,11 +68,15 @@ class MCPServerManager:
             if server_type == "stdio":
                 command = config.get("command")
                 args = config.get("args", [])
+                image = config.get("image")
 
                 if not isinstance(command, str):
                     raise ValueError(f"Server '{name}' is missing a valid 'command'")
                 if not isinstance(args, list):
                     raise ValueError(f"Server '{name}' must provide 'args' as a list")
+
+                if image:
+                    command, args = await self._with_docker(command, args, image)
 
                 session = await self._register_stdio_server(command, args)
                 self.sessions[name] = session
@@ -106,6 +110,12 @@ class MCPServerManager:
             for tool in response.tools:
                 namespaced_name = f"{server}__{tool.name}"
                 print(f"- {namespaced_name}")
+
+    async def _with_docker(self, command, args: list[str], image: str):
+        print(f"Spawning stdio server in Docker image '{image}'")
+        docker_cmd = ["docker", "run", "--rm", "-i", image, command, *args]
+
+        return docker_cmd[0], docker_cmd[1:]
 
     async def _register_stdio_server(
         self, command: str, args: list[str]
