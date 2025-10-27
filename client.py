@@ -190,12 +190,24 @@ class MCPClient:
                     print("Model name cannot be empty.")
                     return
 
+            # End current logging session
+            if self.current_session_id:
+                await self.logger.end_session(self.current_session_id)
+                print(f"Previous session ended. Logs saved to: logs/session_{self.current_session_id}.json")
+
             # Create new provider instance and set model
             self.provider = provider_class()
             self.provider.default_model = model_name
             print(
                 f"\nModel switched to {model_name} ({provider_class.__name__.rstrip('Provider')})"
             )
+
+            # Start new logging session with new provider
+            provider_name = self.provider.__class__.__name__
+            self.current_session_id = await self.logger.start_session(
+                provider_used=provider_name
+            )
+            print(f"New logging session started: {self.current_session_id}")
 
         except ValueError:
             print("Invalid input. Please enter a valid number.")
