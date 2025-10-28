@@ -1,10 +1,10 @@
 # MCP Client Monitoring
 
-This project was created to log MCP server behaviour, to detect malicious MCP servers by intercepting all requests in the MCP client.
+A monitoring tool for logging MCP server behavior and detecting malicious servers by intercepting all requests in the MCP client.
 
 ## Installation
 
-This project uses [`uv`](https://docs.astral.sh/uv/) as the package manager. To install dependencies, run:
+This project uses [`uv`](https://docs.astral.sh/uv/) as the package manager.
 
 ```bash
 uv sync
@@ -12,17 +12,35 @@ uv sync
 
 ## Usage
 
-### Run the MCP Client
+### Interactive Mode
 
-To start the MCP client monitoring service:
+**1. Configure MCP Servers**
+
+Create `servers.json` from `servers.example.json`. Environment variables in the format `${ENV_VAR}` will be replaced with values from your current environment.
+
+**2. Set Environment Variables**
+
+Create `.env` from `.env.example`. Define API keys for your AI providers and any environment variables referenced in `servers.json`.
+
+**3. Start the Monitoring Service**
 
 ```bash
 uv run main.py
 ```
 
+### Test Mode
+
+Run tests with the MCP client:
+
+```bash
+uv run main.py --test <file_name_1> <file_name_2>
+```
+
+Test files are located in the `/tests` directory.
+
 ### View Logs
 
-To pretty print all logs collected during monitoring sessions:
+Pretty print all logs collected during monitoring sessions:
 
 ```bash
 uv run view_logs.py
