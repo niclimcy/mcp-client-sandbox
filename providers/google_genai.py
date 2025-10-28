@@ -115,7 +115,7 @@ class GoogleGenAIProvider(AIProvider):
             config=types.GenerateContentConfig(
                 tools=genai_tools,
                 automatic_function_calling=types.AutomaticFunctionCallingConfig(
-                    disable=True
+                    disable=False
                 ),
             ),
         )

@@ -256,11 +256,11 @@ class MCPClient:
             await self.server_manager.register_all_servers()
 
         # --- Test Mode ---
-        if self.is_test_mode and self.test_data and "model" in self.test_data:
-            model_choice = self.test_data.get("model")
+        if self.is_test_mode and self.test_data and "model_provider" in self.test_data:
+            model_provider = self.test_data.get("model_provider")
             model_string = self.test_data.get("model_string", "")
 
-            await self._auto_switch_model(model_choice, model_string)
+            await self._auto_switch_model(model_provider, model_string)
             print(f"Current Model: {self.provider.current_model}")
 
             # Start logging session
