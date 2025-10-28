@@ -74,6 +74,7 @@ class ToolCallRecord:
     started_at: datetime = field(default_factory=datetime.now)
     completed_at: datetime | None = None
     duration_ms: float = 0.0
+    taint_info: dict | None = None
 
     @staticmethod
     def create(
@@ -150,6 +151,7 @@ class ToolCallRecord:
                 self.completed_at.isoformat() if self.completed_at else None
             ),
             "duration_ms": self.duration_ms,
+            "taint_info": self.taint_info,
         }
 
     def to_json(self) -> str:
