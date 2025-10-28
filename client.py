@@ -156,7 +156,7 @@ class MCPClient:
             final_model_name = model_name
 
         self.provider = provider_class()
-        self.provider.default_model = final_model_name
+        self.provider.set_model(final_model_name)
         print(
             f"\nModel switched to {final_model_name} ({provider_class.__name__.rstrip('Provider')}) via test data."
         )
@@ -203,7 +203,8 @@ class MCPClient:
 
             # Create new provider instance and set model
             self.provider = provider_class()
-            self.provider.default_model = model_name
+            self.provider.set_model(model_name)
+
             print(
                 f"\nModel switched to {model_name} ({provider_class.__name__.rstrip('Provider')})"
             )
@@ -243,7 +244,7 @@ class MCPClient:
     async def run(self):
         """Run an interactive chat loop"""
         print("\nMCP Client Started!")
-        print(f"Current Model: {self.provider.default_model}")
+        print(f"Current Model: {self.provider.current_model}")
         print("\nType '/q' or use Ctrl+D to quit")
         print("Type '/model' to switch models")
 
@@ -260,7 +261,7 @@ class MCPClient:
             model_string = self.test_data.get("model_string", "")
 
             await self._auto_switch_model(model_choice, model_string)
-            print(f"Current Model: {self.provider.default_model}")
+            print(f"Current Model: {self.provider.current_model}")
 
             # Start logging session
             await self._log_start()
@@ -298,7 +299,7 @@ class MCPClient:
 
         # --- Standard Interactive Mode ---
         else:
-            print(f"Current Model: {self.provider.default_model}")
+            print(f"Current Model: {self.provider.current_model}")
             print("\nType '/q' or use Ctrl+D to quit")
             print("Type '/model' to switch models")
 

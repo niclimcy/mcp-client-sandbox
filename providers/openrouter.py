@@ -20,6 +20,7 @@ OPENROUTER_MODELS: list[str] = []
 
 class OpenRouterProvider(AIProvider):
     """OpenRouter provider implementation using OpenAI SDK."""
+    _default_model = "z-ai/glm-4.5-air:free"
 
     def __init__(self, **kwargs) -> None:
         """Initialize OpenRouter provider."""
@@ -35,8 +36,7 @@ class OpenRouterProvider(AIProvider):
         self.client = OpenAI(
             api_key=api_key, base_url="https://openrouter.ai/api/v1", **kwargs
         )
-        # Default model can be set by user, but we'll use a popular one as fallback
-        self.default_model = "z-ai/glm-4.5-air:free"
+        self.set_model(self._default_model)
 
     def get_supported_models(self) -> list[str]:
         """Get list of supported OpenRouter models."""
@@ -81,7 +81,6 @@ class OpenRouterProvider(AIProvider):
         tool_executor: Callable[[str, dict], Awaitable[CallToolResult]],
         logger: ToolUsageLogger,
         server_manager: MCPServerManager,
-        model: str | None = None,
     ) -> str:
         """
         Process a query using OpenRouter with tool support.
@@ -92,12 +91,11 @@ class OpenRouterProvider(AIProvider):
             tool_executor: Callable that executes tool calls (tool_name, tool_args) -> result
             logger: Logger for tracking tool usage
             server_manager: Server manager for getting metadata
-            model: Optional model name (uses default if not specified)
 
         Returns:
             Final response text after processing tool calls
         """
-        model = model or self.default_model
+        model = self.current_model or self._default_model
 
         # Convert MCP tools to OpenAI format
         openai_tools = self._convert_mcp_tools_to_openai_tools(tools)

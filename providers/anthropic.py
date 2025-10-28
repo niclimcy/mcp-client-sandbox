@@ -14,11 +14,12 @@ ANTHROPIC_MODELS = ["claude-haiku-4-5-20251001", "claude-sonnet-4-5-20250929"]
 
 class AnthropicProvider(AIProvider):
     """Anthropic Claude AI provider implementation."""
+    _default_model = ANTHROPIC_MODELS[0] # claude-haiku-4-5-20251001
 
     def __init__(self, **kwargs) -> None:
         """Initialize Anthropic provider."""
         self.client = Anthropic(**kwargs)
-        self.default_model = ANTHROPIC_MODELS[0]
+        self.set_model(self._default_model)
 
     def get_supported_models(self) -> list[str]:
         """Get list of supported Anthropic models."""
@@ -31,7 +32,6 @@ class AnthropicProvider(AIProvider):
         tool_executor: Callable[[str, dict], Awaitable[CallToolResult]],
         logger: ToolUsageLogger,
         server_manager: MCPServerManager,
-        model: str | None = None,
     ) -> str:
         """
         Process a query using Anthropic Claude with tool support.
@@ -42,12 +42,11 @@ class AnthropicProvider(AIProvider):
             tool_executor: Callable that executes tool calls (tool_name, tool_args) -> result
             logger: Logger for tracking tool usage
             server_manager: Server manager for getting metadata
-            model: Optional model name (uses default if not specified)
 
         Returns:
             Final response text after processing tool calls
         """
-        model = model or self.default_model
+        model = self.current_model or self._default_model
         messages = [{"role": "user", "content": query}]
 
         # Initial Claude API call

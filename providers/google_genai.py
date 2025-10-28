@@ -20,11 +20,12 @@ GOOGLE_GENAI_MODELS = [
 
 class GoogleGenAIProvider(AIProvider):
     """Google Generative AI provider implementation."""
+    _default_model = GOOGLE_GENAI_MODELS[0]  # gemini-2.5-flash-lite
 
     def __init__(self, **kwargs) -> None:
         """Initialize Google GenAI provider."""
         self.client = genai.Client(**kwargs)
-        self.default_model = GOOGLE_GENAI_MODELS[0]  # gemini-2.5-flash-lite
+        self.set_model(self._default_model)
 
     def get_supported_models(self) -> list[str]:
         """Get list of supported Google GenAI models."""
@@ -88,7 +89,6 @@ class GoogleGenAIProvider(AIProvider):
         tool_executor: Callable[[str, dict], Awaitable[CallToolResult]],
         logger: ToolUsageLogger,
         server_manager: MCPServerManager,
-        model: str | None = None,
     ) -> str:
         """
         Process a query using Google GenAI with tool support.
@@ -99,12 +99,11 @@ class GoogleGenAIProvider(AIProvider):
             tool_executor: Callable that executes tool calls (tool_name, tool_args) -> result
             logger: Logger for tracking tool usage
             server_manager: Server manager for getting metadata
-            model: Optional model name (uses default if not specified)
 
         Returns:
             Final response text after processing tool calls
         """
-        model = model or self.default_model
+        model = self.current_model or self._default_model
 
         # Convert MCP tools to GenAI format
         genai_tools = self._convert_mcp_tools_to_genai_tools(tools)

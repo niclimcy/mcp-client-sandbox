@@ -11,7 +11,8 @@ from server_manager import MCPServerManager
 class AIProvider(ABC):
     """Base class for AI providers supporting MCP tool integration."""
 
-    default_model: str
+    _default_model: str
+    current_model: str
 
     @abstractmethod
     def __init__(self, **kwargs) -> None:
@@ -23,6 +24,9 @@ class AIProvider(ABC):
         """Get list of supported model names for this provider."""
         pass
 
+    def set_model(self, model_string):
+        self.current_model = model_string
+
     @abstractmethod
     async def process_query(
         self,
@@ -31,7 +35,6 @@ class AIProvider(ABC):
         tool_executor: Callable[[str, dict], Awaitable[CallToolResult]],
         logger: "ToolUsageLogger",
         server_manager: "MCPServerManager",
-        model: str | None = None,
     ) -> str:
         """
         Process a query using available tools.
@@ -42,7 +45,6 @@ class AIProvider(ABC):
             tool_executor: Callable that executes tool calls
             logger: Logger for tracking tool usage (tracks session internally)
             server_manager: Server manager for getting metadata
-            model: Optional model name (uses default if not specified)
 
         Returns:
             Final response text after processing tool calls

@@ -24,10 +24,12 @@ OPENAI_MODELS = [
 class OpenAIProvider(AIProvider):
     """OpenAI provider implementation."""
 
+    _default_model = OPENAI_MODELS[0]  # gpt-4.1
+
     def __init__(self, **kwargs) -> None:
         """Initialize OpenAI provider."""
         self.client = OpenAI(**kwargs)
-        self.default_model = OPENAI_MODELS[0]  # gpt-4.1
+        self.set_model(self._default_model)
 
     def get_supported_models(self) -> list[str]:
         """Get list of supported OpenAI models."""
@@ -72,7 +74,6 @@ class OpenAIProvider(AIProvider):
         tool_executor: Callable[[str, dict], Awaitable[CallToolResult]],
         logger: ToolUsageLogger,
         server_manager: MCPServerManager,
-        model: str | None = None,
     ) -> str:
         """
         Process a query using OpenAI with tool support.
@@ -83,12 +84,11 @@ class OpenAIProvider(AIProvider):
             tool_executor: Callable that executes tool calls (tool_name, tool_args) -> result
             logger: Logger for tracking tool usage
             server_manager: Server manager for getting metadata
-            model: Optional model name (uses default if not specified)
 
         Returns:
             Final response text after processing tool calls
         """
-        model = model or self.default_model
+        model = self.current_model or self._default_model
 
         # Convert MCP tools to OpenAI format
         openai_tools = self._convert_mcp_tools_to_openai_tools(tools)
