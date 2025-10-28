@@ -158,7 +158,7 @@ class MCPClient:
         self.provider = provider_class()
         self.provider.set_model(final_model_name)
         print(
-            f"\nModel switched to {final_model_name} ({provider_class.__name__.rstrip('Provider')}) via test data."
+            f"\nModel switched to {final_model_name} ({provider_class.__name__.removesuffix('Provider')}) via test data."
         )
 
     async def _switch_model(self) -> None:
@@ -206,7 +206,7 @@ class MCPClient:
             self.provider.set_model(model_name)
 
             print(
-                f"\nModel switched to {model_name} ({provider_class.__name__.rstrip('Provider')})"
+                f"\nModel switched to {model_name} ({provider_class.__name__.removesuffix('Provider')})"
             )
 
             # Start new logging session with new provider
@@ -227,7 +227,9 @@ class MCPClient:
             )
 
             if start_new_session:
-                provider_name = self.provider.__class__.__name__
+                provider_name = self.provider.__class__.__name__.removesuffix(
+                    "Provider"
+                )
                 self.current_session_id = await self.logger.start_session(
                     provider_used=provider_name
                 )
@@ -235,7 +237,7 @@ class MCPClient:
 
     async def _log_start(self):
         # Start logging session
-        provider_name = self.provider.__class__.__name__
+        provider_name = self.provider.__class__.__name__.removesuffix("Provider")
         self.current_session_id = await self.logger.start_session(
             provider_used=provider_name
         )
