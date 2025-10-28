@@ -1,6 +1,14 @@
 {
-    "model_provider": 1,
-    "model_string": "",
+    "models": [
+        {
+            "model_provider": 1,
+            "model_string": ""
+        },
+        {
+            "model_provider": 14,
+            "model_string": "minimax/minimax-m2:free"
+        }
+    ],
     "servers": {
         "context7": {
             "type": "http",

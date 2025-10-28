@@ -258,9 +258,11 @@ class MCPClient:
             await self.server_manager.register_all_servers()
 
         # --- Test Mode ---
-        if self.is_test_mode and self.test_data and "model_provider" in self.test_data:
-            model_provider = self.test_data.get("model_provider")
-            model_string = self.test_data.get("model_string", "")
+        if self.is_test_mode and self.test_data and "models" in self.test_data:
+            cur_model_index = self.test_data.get("cur_model_index")
+            cur_model = self.test_data.get("models")[cur_model_index]
+            model_provider = cur_model.get("model_provider")
+            model_string = cur_model.get("model_string", "")
 
             await self._auto_switch_model(model_provider, model_string)
             print(f"Current Model: {self.provider.current_model}")

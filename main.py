@@ -3,6 +3,7 @@ import argparse
 import json
 from pathlib import Path
 from client import MCPClient
+import copy
 
 def get_cli_args():
     """Parses command-line arguments."""
@@ -65,19 +66,28 @@ async def main(is_test_mode: bool, test_names: list[str] | None):
             test_name = test_names[i] # Use the original name for logging/reference
 
             print(f"\n--- Starting Client Run for Test: {test_name} ({i+1}/{len(test_data_to_run)}) ---")
+            num_models = len(data.get("models", []))
+            print(f"Test '{test_name}' contains {num_models} models.")
             
-            # Create a new client for each test run
-            # Pass is_test_mode=True and the loaded JSON data
-            client = MCPClient(is_test_mode=True, test_data=data)
+            for model_index in range(num_models):
+                print(f"\n--- Starting Client Run for Test: {test_name} ({i+1}/{len(test_data_to_run)}) Model ({model_index + 1}/{num_models}) ---")
+                data_copy = copy.deepcopy(data)
+                data_copy["cur_model_index"] = model_index
             
-            try:
-                # The client.run() should handle the test logic based on test_data
-                await client.run() 
-            except Exception as e:
-                print(f"🔥 FATAL ERROR during client run for test '{test_name}': {e}")
-            finally:
-                await client.cleanup()
-                print(f"--- Finished Client Run for Test: {test_name} ---")
+                # Create a new client for each test run
+                # Pass is_test_mode=True and the loaded JSON data
+                client = MCPClient(is_test_mode=True, test_data=data_copy)
+                
+                try:
+                    # The client.run() should handle the test logic based on test_data
+                    await client.run() 
+                except Exception as e:
+                    print(f"🔥 FATAL ERROR during client run for test '{test_name}': {e}")
+                finally:
+                    await client.cleanup()
+                    print(f"--- Finished Client Run for Test: {test_name} ---")
+        
+        print("--- 🎉FINISHED ALL TESTS!!! ---")
 
     else:
         # Standard Mode (Original Logic)
