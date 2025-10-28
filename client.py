@@ -37,7 +37,7 @@ class MCPClient:
         if self.is_test_mode and self.test_data:
             print("MCPClient initialized in TEST MODE with loaded data.")
         else:
-            self.is_test_mode = False # Set back to false if no data found.
+            self.is_test_mode = False  # Set back to false if no data found.
 
     async def _process_query(self, query: str) -> str:
         """Process a query using all available tools"""
@@ -126,9 +126,10 @@ class MCPClient:
             option += 1
         print(f"[{option}] Custom model (enter model string)")
         option += 1
-    
 
-    async def _auto_switch_model(self, choice: int, model_string: str | None = None) -> None:
+    async def _auto_switch_model(
+        self, choice: int, model_string: str | None = None
+    ) -> None:
         """
         Automatically switch model based on an integer choice and optional custom string.
         Used for test mode initialization.
@@ -136,16 +137,20 @@ class MCPClient:
         models = self._get_available_models()
 
         if choice not in models:
-            print(f"\n⚠️ WARNING: Invalid model choice '{choice}' found in test data. Using default model.")
+            print(
+                f"\n⚠️ WARNING: Invalid model choice '{choice}' found in test data. Using default model."
+            )
             return
 
         provider_class, model_name = models[choice]
 
         if model_name is None:
             final_model_name = model_string.strip() if model_string else None
-            
+
             if not final_model_name:
-                print(f"\n⚠️ WARNING: Model choice '{choice}' is custom, but 'model_string' is empty. Using default model.")
+                print(
+                    f"\n⚠️ WARNING: Model choice '{choice}' is custom, but 'model_string' is empty. Using default model."
+                )
                 return
         else:
             final_model_name = model_name
@@ -155,7 +160,6 @@ class MCPClient:
         print(
             f"\nModel switched to {final_model_name} ({provider_class.__name__.rstrip('Provider')}) via test data."
         )
-
 
     async def _switch_model(self) -> None:
         """Handle model switching based on user input (interactive mode)"""
@@ -193,7 +197,9 @@ class MCPClient:
             # End current logging session
             if self.current_session_id:
                 await self.logger.end_session(self.current_session_id)
-                print(f"Previous session ended. Logs saved to: logs/session_{self.current_session_id}.json")
+                print(
+                    f"Previous session ended. Logs saved to: logs/session_{self.current_session_id}.json"
+                )
 
             # Create new provider instance and set model
             self.provider = provider_class()
@@ -203,16 +209,36 @@ class MCPClient:
             )
 
             # Start new logging session with new provider
-            provider_name = self.provider.__class__.__name__
-            self.current_session_id = await self.logger.start_session(
-                provider_used=provider_name
-            )
-            print(f"New logging session started: {self.current_session_id}")
+            await self._log_cleanup(True)
 
         except ValueError:
             print("Invalid input. Please enter a valid number.")
         except Exception as e:
             print(f"Error switching model: {str(e)}")
+
+    async def _log_cleanup(self, start_new_session=False):
+        """Ends the logging session and prints the log path."""
+        if self.current_session_id:
+            context_message = "Test run complete. " if self.is_test_mode else ""
+            await self.logger.end_session(self.current_session_id)
+            print(
+                f"\n{context_message}Logs saved to: logs/session_{self.current_session_id}.json"
+            )
+
+            if start_new_session:
+                provider_name = self.provider.__class__.__name__
+                self.current_session_id = await self.logger.start_session(
+                    provider_used=provider_name
+                )
+                print(f"New logging session started: {self.current_session_id}")
+
+    async def _log_start(self):
+        # Start logging session
+        provider_name = self.provider.__class__.__name__
+        self.current_session_id = await self.logger.start_session(
+            provider_used=provider_name
+        )
+        print(f"Logging session started: {self.current_session_id}")
 
     async def run(self):
         """Run an interactive chat loop"""
@@ -221,75 +247,63 @@ class MCPClient:
         print("\nType '/q' or use Ctrl+D to quit")
         print("Type '/model' to switch models")
 
-        # Start logging session
-        provider_name = self.provider.__class__.__name__
-        self.current_session_id = await self.logger.start_session(
-            provider_used=provider_name
-        )
-        print(f"Logging session started: {self.current_session_id}")
-
-        if self.is_test_mode and self.test_data and '__filepath' in self.test_data:
-            await self.server_manager.register_all_servers(config_path=self.test_data["__filepath"])
+        if self.is_test_mode and self.test_data and "__filepath" in self.test_data:
+            await self.server_manager.register_all_servers(
+                config_path=self.test_data["__filepath"]
+            )
         else:
             await self.server_manager.register_all_servers()
 
-        # Start logging session
-        provider_name = self.provider.__class__.__name__
-        self.current_session_id = await self.logger.start_session(
-            provider_used=provider_name
-        )
-        print(f"Logging session started: {self.current_session_id}")
-
-        async def _log_cleanup():
-            """Ends the logging session and prints the log path."""
-            if self.current_session_id:
-                context_message = "Test run complete. " if self.is_test_mode else ""
-                await self.logger.end_session(self.current_session_id)
-                print(f"\n{context_message}Logs saved to: logs/session_{self.current_session_id}.json")
-
         # --- Test Mode ---
-        if self.is_test_mode and self.test_data and 'model' in self.test_data:
-            model_choice = self.test_data.get('model')
-            model_string = self.test_data.get('model_string', "")
-            
+        if self.is_test_mode and self.test_data and "model" in self.test_data:
+            model_choice = self.test_data.get("model")
+            model_string = self.test_data.get("model_string", "")
+
             await self._auto_switch_model(model_choice, model_string)
             print(f"Current Model: {self.provider.default_model}")
-            
+
+            # Start logging session
+            await self._log_start()
 
             try:
                 print("\nExecuting test logic...")
-                prompts = self.test_data.get('prompts', [])
-                
+                prompts = self.test_data.get("prompts", [])
+
                 print(f"Total prompts to run: {len(prompts)}")
-                
+
                 if not prompts:
                     print("⚠️ WARNING: No prompts found in test data.")
                     # TODO: Consider throwing exception so that the finally block executes and can end logging session.
-                    return # Exit run if no prompts
+                    return  # Exit run if no prompts
 
                 for i, query in enumerate(prompts):
-                    print(f"\n[TEST PROMPT {i+1}/{len(prompts)}]: {query[:80]}...") 
-                    
+                    print(f"\n[TEST PROMPT {i+1}/{len(prompts)}]: {query[:80]}...")
+
                     try:
                         response = await self._process_query(query)
-                        
+
                         print("\n[RESPONSE]:")
                         print(response)
-                        
+
                     except Exception as e:
-                        print(f"🔥 ERROR: Failed to process test prompt {i+1}. Error: {str(e)}")
+                        print(
+                            f"🔥 ERROR: Failed to process test prompt {i+1}. Error: {str(e)}"
+                        )
                         # Continue to the next prompt, don't break the whole test run
 
             finally:
-                await _log_cleanup()
-            
-            return # Exit the run method after the test is complete
+                await self._log_cleanup()
+
+            return  # Exit the run method after the test is complete
 
         # --- Standard Interactive Mode ---
         else:
             print(f"Current Model: {self.provider.default_model}")
             print("\nType '/q' or use Ctrl+D to quit")
             print("Type '/model' to switch models")
+
+            # Start logging session
+            await self._log_start()
 
             try:
                 while True:
@@ -314,7 +328,7 @@ class MCPClient:
                     except Exception as e:
                         print(f"\nError: {str(e)}")
             finally:
-                await _log_cleanup()
+                await self._log_cleanup()
 
     async def cleanup(self):
         """Clean up resources"""
