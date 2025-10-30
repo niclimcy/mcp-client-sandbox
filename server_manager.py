@@ -51,6 +51,7 @@ class MCPServerManager:
                 command = config.get("command")
                 args = config.get("args", [])
                 image = config.get("image")
+                cwd = config.get("cwd")
 
                 if not isinstance(command, str):
                     raise ValueError(f"Server '{name}' is missing a valid 'command'")
@@ -60,7 +61,7 @@ class MCPServerManager:
                 if image:
                     command, args = await self._with_docker(command, args, image)
 
-                session = await self._register_stdio_server(command, args)
+                session = await self._register_stdio_server(command, args, cwd)
                 self.sessions[name] = session
 
                 # Store server metadata
@@ -119,17 +120,20 @@ class MCPServerManager:
         return docker_cmd[0], docker_cmd[1:]
 
     async def _register_stdio_server(
-        self, command: str, args: list[str]
+        self, command: str, args: list[str], cwd: str | None = None
     ) -> ClientSession:
         """Register a stdio server
 
         Args:
             command: Command to start the server (e.g., "python" or "node")
             args: Arguments for the command (e.g., path to the server script)
+            cwd: Working directory for the server process (optional)
         Returns:
             ClientSession connected to the server
         """
-        server_params = StdioServerParameters(command=command, args=args, env=None)
+        server_params = StdioServerParameters(
+            command=command, args=args, env=None, cwd=cwd
+        )
         stdio_transport = await self.exit_stack.enter_async_context(
             stdio_client(server_params)
         )

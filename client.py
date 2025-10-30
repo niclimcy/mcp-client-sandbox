@@ -1,5 +1,6 @@
 import asyncio
 from contextlib import AsyncExitStack
+import os
 
 from dotenv import load_dotenv
 
@@ -303,7 +304,7 @@ class MCPClient:
 
                     # Add sleep between prompts to avoid rate limiting (except after the last prompt)
                     if i < len(prompts) - 1:
-                        sleep_duration = 10
+                        sleep_duration = int(os.getenv('AI_PROVIDER_RATE_LIMIT', '10'))
                         print(
                             f"\nWaiting {sleep_duration}s before next prompt to avoid rate limiting..."
                         )
