@@ -30,6 +30,7 @@ class OpenAIProvider(AIProvider):
         """Initialize OpenAI provider."""
         self.client = OpenAI(**kwargs)
         self.set_model(self._default_model)
+        self.conversation_history = []
 
     def get_supported_models(self) -> list[str]:
         """Get list of supported OpenAI models."""
@@ -93,8 +94,9 @@ class OpenAIProvider(AIProvider):
         # Convert MCP tools to OpenAI format
         openai_tools = self._convert_mcp_tools_to_openai_tools(tools)
 
-        # Initialize message history
-        messages = [{"role": "user", "content": query}]
+        # Start with conversation history and add new user query
+        messages = self.conversation_history.copy()
+        messages.append({"role": "user", "content": query})
 
         # Initial OpenAI API call
         response = self.client.chat.completions.create(
@@ -205,5 +207,8 @@ class OpenAIProvider(AIProvider):
                 if message.content:
                     final_text.append(message.content)
                 break
+
+        # Update conversation history with the complete exchange
+        self.conversation_history = messages
 
         return "\n".join(final_text)

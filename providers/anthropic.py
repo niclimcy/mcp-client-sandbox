@@ -20,6 +20,7 @@ class AnthropicProvider(AIProvider):
         """Initialize Anthropic provider."""
         self.client = Anthropic(**kwargs)
         self.set_model(self._default_model)
+        self.conversation_history = []
 
     def get_supported_models(self) -> list[str]:
         """Get list of supported Anthropic models."""
@@ -47,7 +48,10 @@ class AnthropicProvider(AIProvider):
             Final response text after processing tool calls
         """
         model = self.current_model or self._default_model
-        messages = [{"role": "user", "content": query}]
+        
+        # Start with conversation history and add new user query
+        messages = self.conversation_history.copy()
+        messages.append({"role": "user", "content": query})
 
         # Initial Claude API call
         response = self.client.messages.create(
@@ -150,5 +154,8 @@ class AnthropicProvider(AIProvider):
                     )
                     await logger.log_tool_call(record)
                     raise
+
+        # Update conversation history with the complete exchange
+        self.conversation_history = messages
 
         return "\n".join(final_text)

@@ -157,6 +157,7 @@ class MCPClient:
 
         self.provider = provider_class()
         self.provider.set_model(final_model_name)
+        self.provider.reset_conversation_history()
         print(
             f"\nModel switched to {final_model_name} ({provider_class.__name__.removesuffix('Provider')}) via test data."
         )
@@ -204,6 +205,7 @@ class MCPClient:
             # Create new provider instance and set model
             self.provider = provider_class()
             self.provider.set_model(model_name)
+            self.provider.reset_conversation_history()
 
             print(
                 f"\nModel switched to {model_name} ({provider_class.__name__.removesuffix('Provider')})"
@@ -242,6 +244,9 @@ class MCPClient:
             provider_used=provider_name
         )
         print(f"Logging session started: {self.current_session_id}")
+        
+        # Reset conversation history at the start of a new session
+        self.provider.reset_conversation_history()
 
     async def run(self):
         """Run an interactive chat loop"""

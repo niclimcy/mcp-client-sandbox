@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Awaitable, Callable
+from typing import Any, Awaitable, Callable
 
 from mcp import Tool
 from mcp.types import CallToolResult
@@ -13,6 +13,7 @@ class AIProvider(ABC):
 
     _default_model: str
     current_model: str
+    conversation_history: list[Any]
 
     @abstractmethod
     def __init__(self, **kwargs) -> None:
@@ -26,6 +27,10 @@ class AIProvider(ABC):
 
     def set_model(self, model_string):
         self.current_model = model_string
+
+    def reset_conversation_history(self) -> None:
+        """Reset the conversation history. Should be called when starting a new session."""
+        self.conversation_history = []
 
     @abstractmethod
     async def process_query(

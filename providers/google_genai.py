@@ -26,6 +26,7 @@ class GoogleGenAIProvider(AIProvider):
         """Initialize Google GenAI provider."""
         self.client = genai.Client(**kwargs)
         self.set_model(self._default_model)
+        self.conversation_history = []
 
     def get_supported_models(self) -> list[str]:
         """Get list of supported Google GenAI models."""
@@ -108,10 +109,18 @@ class GoogleGenAIProvider(AIProvider):
         # Convert MCP tools to GenAI format
         genai_tools = self._convert_mcp_tools_to_genai_tools(tools)
 
+        # Start with conversation history and add new user query
+        contents_history = self.conversation_history.copy()
+        new_user_content = types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=query)],
+        )
+        contents_history.append(new_user_content)
+
         # Initial GenAI call with manual function calling
         response = self.client.models.generate_content(
             model=model,
-            contents=query,
+            contents=contents_history,
             config=types.GenerateContentConfig(
                 tools=genai_tools,
                 automatic_function_calling=types.AutomaticFunctionCallingConfig(
@@ -122,12 +131,6 @@ class GoogleGenAIProvider(AIProvider):
 
         # Process response and handle tool calls
         final_text = []
-        contents_history = [
-            types.Content(
-                role="user",
-                parts=[types.Part.from_text(text=query)],
-            )
-        ]
 
         # Loop to handle multiple rounds of function calling
         max_iterations = 10
@@ -229,5 +232,8 @@ class GoogleGenAIProvider(AIProvider):
         # Extract final text response
         if response.text:
             final_text.append(response.text)
+
+        # Update conversation history with the complete exchange
+        self.conversation_history = contents_history
 
         return "\n".join(final_text)
