@@ -296,6 +296,14 @@ class MCPClient:
                         )
                         # Continue to the next prompt, don't break the whole test run
 
+                    # Add sleep between prompts to avoid rate limiting (except after the last prompt)
+                    if i < len(prompts) - 1:
+                        sleep_duration = 10
+                        print(
+                            f"\nWaiting {sleep_duration}s before next prompt to avoid rate limiting..."
+                        )
+                        await asyncio.sleep(sleep_duration)
+
             finally:
                 await self._log_cleanup()
 
