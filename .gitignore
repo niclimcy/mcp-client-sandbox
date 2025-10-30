@@ -20,3 +20,6 @@ servers.json
 
 # Logs
 logs/
+
+# Ignore sandbox .env
+!sandbox/.env

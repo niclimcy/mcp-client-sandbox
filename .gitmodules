@@ -1,0 +1,6 @@
+[submodule "examples/vulnerable_git_mcp_server"]
+	path = examples/vulnerable_git_mcp_server
+	url = https://github.com/cyanheads/git-mcp-server.git
+[submodule "sandbox"]
+	path = sandbox
+	url = git@github.com:niclimcy/vulnerable-sandbox.git
