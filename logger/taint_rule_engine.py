@@ -86,7 +86,7 @@ class TaintRuleEngine:
     def _default_rules(self) -> List[TaintRule]:
         # Regex patterns inspired by YARA, Pysa, industry sources[web:6][web:39][web:48]
         sensitive_pat = r"(password|passwd|pwd|secret|api[_-]?key|token|private[_-]?key|bearer|client[_-]?secret)[\"':=\s]+\S+|-----BEGIN [A-Z ]+PRIVATE KEY-----"
-        cmd_inj_pat = r"([;&|`$()]|&&|\|\|)|\b(rm|cat|ls|wget|curl|exec|eval|system|bash|sh|powershell|cmd)\b"
+        cmd_inj_pat = r"\b(rm|cat|ls|wget|curl|exec|eval|system|bash|sh|powershell|cmd)\b"
         pathtrav_pat = r"\.\.(\/|\\|%2e)|/etc/passwd|/etc/shadow"
         sqli_pat = r"(?:'|\")?(?:\s*)(or|and)(?:\s+)?\d+\s*=\s*\d+|union\s+select|drop\s+table|--|/\*.*\*/"
 
