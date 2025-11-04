@@ -30,59 +30,71 @@ uv run main.py
 
 ### Test Mode
 
-Run tests with the MCP client:
+Run tests with the MCP client using the `--test` flag. You can pass one or more test names (space-separated). Test files live in the `tests/` directory and are referenced by name (the loader appends `.json`).
+
+Quick usage:
 
 ```bash
-uv run main.py --test <file_name_1> <file_name_2>
+uv run main.py --test <test_name_1> [<test_name_2> ...]
 ```
 
-Test files are located in the `/tests` directory.
+Example: the repository includes an example test called `chain_attack_test`. It requires fetching git submodules and building two Node.js-based example MCP servers. Follow the steps below to run it locally.
 
-First test: `chain_attack_test`
-
-The repository includes an example test (`chain_attack_test`) that requires fetching git submodules and building 2 MCP servers (Node.js based). To run this first test locally, follow these steps:
-
-1. Ensure you have Git and Node.js (npm) installed on your machine.
-
-2. Initialize or update submodules (if you cloned without submodules):
+1. Fetch and initialize submodules:
 
 ```bash
 # from the repo root
 git submodule update --init --recursive
 ```
 
-3. Build the malicious MCP server used by the test
+2. Build the malicious MCP server used by the test:
 
 ```bash
 cd examples/malicious_git_chain_attack
-npm i
+npm ci
 npm run build
 cd -
 ```
 
-4. Build the vulnerable MCP server used by the test
+3. Build the vulnerable MCP server used by the test:
 
 ```bash
 cd examples/vulnerable_git_mcp_server
-npm i
+npm ci
 npm run build
 cd -
 ```
 
-5. Set environment variables
+4. Create a `.env` in the repo root (you can copy from `.env.example`) and set required environment variables. Example `.env` entries:
 
-```.env
+```env
+# API key for provider
 GOOGLE_API_KEY=AIza****
-SANDBOX_PATH=/path/to/mcp-client-monitoring/sandbox
+
+# Absolute path to andbox environment used by this test
+SANDBOX_PATH=/absolute/path/to/mcp-client-monitoring/sandbox
 ```
 
-6. Run the test with the MCP client (tests are referenced by name; the file `tests/chain_attack_test.json` is used when you pass `chain_attack_test`):
+5. Run the example test `chain_attack_test`:
 
 ```bash
 uv run main.py --test chain_attack_test
 ```
 
-- This example requires Node. If you use nvm, ensure you have a compatible Node version active before running `npm i`.
+Running multiple tests:
+
+```bash
+uv run main.py --test chain_attack_test another_test_name
+```
+
+Troubleshooting & tips
+
+- If a Node build fails, run `npm ci` then `npm run build` inside the failing example folder and inspect the build output.
+- If you get errors about missing submodules or missing example server files, re-run:
+
+```bash
+git submodule update --init --recursive
+```
 
 ### View Logs
 
