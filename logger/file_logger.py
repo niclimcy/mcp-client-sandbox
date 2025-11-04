@@ -19,17 +19,6 @@ class FileSystemLogger(ToolUsageLogger):
         logs_dir: Directory where log files are stored
         sessions: In-memory cache of active sessions
     """
-
-    # def __init__(self, logs_dir: str = "logs"):
-    #     """Initialize the file system logger.
-
-    #     Args:
-    #         logs_dir: Directory path for storing log files
-    #     """
-    #     self.logs_dir = Path(logs_dir)
-    #     self.sessions: dict[str, ToolCallSession] = {}
-    #     self.current_session_id: str | None = None
-    #     self._ensure_logs_directory()
     
     def __init__(self, logs_dir: str = "logs", taint_rule_engine: TaintRuleEngine = None):
         """Initialize the file system logger.

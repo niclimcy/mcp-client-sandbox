@@ -62,6 +62,7 @@ class ToolCallRecord:
         started_at: Timestamp when execution started
         completed_at: Timestamp when execution completed
         duration_ms: Execution duration in milliseconds
+        taint_info: Information regarding the taint
     """
 
     call_id: str

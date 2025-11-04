@@ -82,20 +82,45 @@ class TaintRuleEngine:
 
     def __init__(self, rules: Optional[List[TaintRule]] = None):
         self.rules: List[TaintRule] = rules if rules is not None else self._default_rules()
-
+    
     def _default_rules(self) -> List[TaintRule]:
-        # Regex patterns inspired by YARA, Pysa, industry sources[web:6][web:39][web:48]
-        sensitive_pat = r"(password|passwd|pwd|secret|api[_-]?key|token|private[_-]?key|bearer|client[_-]?secret)[\"':=\s]+\S+|-----BEGIN [A-Z ]+PRIVATE KEY-----"
-        cmd_inj_pat = r"\b(rm|cat|ls|wget|curl|exec|eval|system|bash|sh|powershell|cmd)\b"
-        pathtrav_pat = r"\.\.(\/|\\|%2e)|/etc/passwd|/etc/shadow"
-        sqli_pat = r"(?:'|\")?(?:\s*)(or|and)(?:\s+)?\d+\s*=\s*\d+|union\s+select|drop\s+table|--|/\*.*\*/"
-
+        sensitive_pat = (
+            r"(password|passwd|pwd|secret|token|apikey|api[_-]?key|private[_-]?key|bearer|client[_-]?secret)[\"'=:]\s*[\w\-_.\/+]{8,}|"
+            r"-----BEGIN (RSA|EC|OPENSSH|PGP|PRIVATE) KEY-----|"
+            r"AKIA[0-9A-Z]{16}|"
+            r"AIza[0-9A-Za-z-_]{35}|"
+            r"ya29\.[0-9A-Za-z\-_]+|"
+            r"([A-Za-z0-9+/]{40,}={0,2})|"
+            r"[A-Fa-f0-9]{40,}|"
+            r"\b\d{12,19}\b"  # Credit card numbers (basic)
+        )
+    
+        cmd_inj_pat = (
+            r"\b(rm|cat|ls|wget|curl|exec|eval|system|bash|sh|powershell|cmd|nc|netcat|python|perl|php|ruby|java|gcc|g\+\+|docker|kubectl)\b|[;&|`$()<>]"
+        )
+    
+        pathtrav_pat = r"\.\.(\/|\\|%2e)|/etc/passwd|/etc/shadow|\\.\\.|%2e%2e"
+    
+        sqli_pat = (
+            r"(?:'|\")?\s*(or|and)\s*\d+\s*=\s*\d+|union\s+select|drop\s+table|--|/\*.*\*/|insert\s+into|delete\s+from|update\s+\w+\s+set"
+        )
+    
+        pii_pat = r"([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)"  # Email
+    
+        ip_addr_pat = (
+            r"\b(?:(?:2[0-4]\d|25[0-5]|1\d{2}|[1-9]?\d)(?:\.|$)){4}\b"
+        )
+    
         return [
             TaintRule(TaintLabel.SENSITIVE, RuleType.REGEX, sensitive_pat, description="Sensitive data leak"),
             TaintRule(TaintLabel.COMMAND_INJECTION, RuleType.REGEX, cmd_inj_pat, description="Command injection"),
             TaintRule(TaintLabel.PATH_TRAVERSAL, RuleType.REGEX, pathtrav_pat, description="Path traversal"),
             TaintRule(TaintLabel.SQL_INJECTION, RuleType.REGEX, sqli_pat, description="SQL Injection"),
+            # Additional output-specific patterns:
+            TaintRule(TaintLabel.SENSITIVE, RuleType.REGEX, pii_pat, description="Possible PII detected"),
+            TaintRule(TaintLabel.SENSITIVE, RuleType.REGEX, ip_addr_pat, description="IP address leak"),
         ]
+
 
     def evaluate(self, data: Any, context: Optional[Dict] = None) -> TaintResult:
         result = TaintResult()
