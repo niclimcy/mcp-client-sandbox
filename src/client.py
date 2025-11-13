@@ -364,3 +364,4 @@ class MCPClient:
     async def cleanup(self):
         """Clean up resources"""
         await self.exit_stack.aclose()
+        return self.logger.current_session_id

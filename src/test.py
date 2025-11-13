@@ -3,6 +3,8 @@ import pathlib
 import json
 
 from client import MCPClient
+from logger.taint_rule_engine import Confidence
+from log_processor import process_logs
 
 
 async def test(test_names: list[str] | None):
@@ -88,7 +90,12 @@ async def test(test_names: list[str] | None):
             except Exception as e:
                 print(f"🔥 FATAL ERROR during client run for test '{test_name}': {e}")
             finally:
-                await client.cleanup()
                 print(f"--- Finished Client Run for Test: {test_name} ---")
+
+                session_id = await client.cleanup()
+                log_path = pathlib.Path("logs") / f"session_{session_id}.json"
+                process_logs(
+                    log_path, min_confidence=Confidence.MEDIUM, min_risk_score=2
+                )
 
     print("--- 🎉FINISHED ALL TESTS!!! ---")
