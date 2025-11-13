@@ -1,5 +1,6 @@
 import asyncio
 import argparse
+import sys
 
 from client import MCPClient
 from test import test
@@ -50,8 +51,6 @@ async def main():
 
 
 if __name__ == "__main__":
-    import sys
-
     is_test_mode, files = get_cli_args()
 
     if is_test_mode:

@@ -94,8 +94,12 @@ async def test(test_names: list[str] | None):
 
                 session_id = await client.cleanup()
                 log_path = pathlib.Path("logs") / f"session_{session_id}.json"
+                analysis_path = pathlib.Path("logs") / f"analysis_{session_id}.txt"
                 process_logs(
-                    log_path, min_confidence=Confidence.MEDIUM, min_risk_score=2
+                    log_path,
+                    min_confidence=Confidence.MEDIUM,
+                    min_risk_score=2,
+                    analysis_filepath=analysis_path,
                 )
 
     print("--- 🎉FINISHED ALL TESTS!!! ---")

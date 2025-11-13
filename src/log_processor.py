@@ -1,3 +1,4 @@
+import argparse
 import json
 import pathlib
 
@@ -8,6 +9,7 @@ def process_logs(
     log_path: pathlib.Path,
     min_confidence: Confidence = Confidence.MEDIUM,
     min_risk_score: int = 2,
+    analysis_filepath: pathlib.Path | None = None,
 ):
     """
     Process logs and detect malicious patterns with configurable filtering
@@ -21,6 +23,9 @@ def process_logs(
 
     engine = TaintRuleEngine()
 
+    if analysis_filepath is None:
+        analysis_filepath = log_path.with_name(f"analysis_{log_path.name}")
+
     with open(log_path, "r", encoding="utf-8") as f:
         logs_str = f.read()
 
@@ -28,10 +33,14 @@ def process_logs(
     tool_calls = logs.get("tool_calls", [])
     tool_calls.sort(key=lambda x: x.get("timestamp", ""))
 
-    print("=" * 80)
-    print("SECURITY ANALYSIS OF TOOL CALLS")
-    print(f"Filtering: confidence >= {min_confidence}, risk_score >= {min_risk_score}")
-    print("=" * 80)
+    # Write analysis to file instead of printing to stdout
+    out = open(analysis_filepath, "w", encoding="utf-8")
+    out.write("=" * 80 + "\n")
+    out.write("SECURITY ANALYSIS OF TOOL CALLS\n")
+    out.write(
+        f"Filtering: confidence >= {min_confidence}, risk_score >= {min_risk_score}\n"
+    )
+    out.write("=" * 80 + "\n")
 
     high_risk_count = 0
 
@@ -70,25 +79,25 @@ def process_logs(
         if is_high_risk:
             high_risk_count += 1
 
-        print(f"\n{'='*80}")
+        out.write(f"\n{'='*80}\n")
         risk_indicator = "🚨 HIGH RISK" if is_high_risk else "⚠️  SUSPICIOUS"
-        print(f"{risk_indicator} - TOOL CALL #{idx}")
-        print(f"{'='*80}")
-        print(f"Tool Name: {tool_call.get('tool_name')}")
-        print(f"Timestamp: {tool_call.get('timestamp', 'N/A')}")
-        print(f"Risk Score: {total_risk}")
+        out.write(f"{risk_indicator} - TOOL CALL #{idx}\n")
+        out.write(f"{'='*80}\n")
+        out.write(f"Tool Name: {tool_call.get('tool_name')}\n")
+        out.write(f"Timestamp: {tool_call.get('timestamp', 'N/A')}\n")
+        out.write(f"Risk Score: {total_risk}\n")
 
         if taint_info:
-            print("\nOriginal Taint Info:")
-            print(f"  Input Tainted: {taint_info.get('input_tainted')}")
-            print(f"  Output Tainted: {taint_info.get('output_tainted')}")
-            print(f"  Taint Flow: {taint_info.get('taint_flow_detected')}")
+            out.write("\nOriginal Taint Info:\n")
+            out.write(f"  Input Tainted: {taint_info.get('input_tainted')}\n")
+            out.write(f"  Output Tainted: {taint_info.get('output_tainted')}\n")
+            out.write(f"  Taint Flow: {taint_info.get('taint_flow_detected')}\n")
 
         # INPUT ANALYSIS
         if input_findings:
-            print(f"\n{'─'*80}")
-            print(f"INPUT ANALYSIS ({len(input_findings)} findings):")
-            print(f"{'─'*80}")
+            out.write(f"\n{'─'*80}\n")
+            out.write(f"INPUT ANALYSIS ({len(input_findings)} findings):\n")
+            out.write(f"{'─'*80}\n")
 
             # Group by label
             by_label = {}
@@ -99,26 +108,28 @@ def process_logs(
                 by_label[label].append(finding)
 
             for label, findings in by_label.items():
-                print(f"\n  [{label}]")
+                out.write(f"\n  [{label}]\n")
                 for finding in findings:
                     conf_icon = (
                         "🔴"
                         if finding.confidence == Confidence.HIGH
                         else "🟡" if finding.confidence == Confidence.MEDIUM else "🟢"
                     )
-                    print(f"    {conf_icon} {finding.confidence}: {finding.field_path}")
-                    print(f"       Matched: {finding.matched[:100]}")
+                    out.write(
+                        f"    {conf_icon} {finding.confidence}: {finding.field_path}\n"
+                    )
+                    out.write(f"       Matched: {finding.matched[:100]}\n")
 
             # Show relevant input snippet
-            print("\n  Input Data Sample:")
+            out.write("\n  Input Data Sample:\n")
             input_str = json.dumps(tool_input, indent=2)
-            print(f"  {input_str[:500]}...")
+            out.write(f"  {input_str[:500]}...\n")
 
         # OUTPUT ANALYSIS
         if output_findings:
-            print(f"\n{'─'*80}")
-            print(f"OUTPUT ANALYSIS ({len(output_findings)} findings):")
-            print(f"{'─'*80}")
+            out.write(f"\n{'─'*80}\n")
+            out.write(f"OUTPUT ANALYSIS ({len(output_findings)} findings):\n")
+            out.write(f"{'─'*80}\n")
 
             by_label = {}
             for finding in output_findings:
@@ -128,29 +139,48 @@ def process_logs(
                 by_label[label].append(finding)
 
             for label, findings in by_label.items():
-                print(f"\n  [{label}]")
+                out.write(f"\n  [{label}]\n")
                 for finding in findings:
                     conf_icon = (
                         "🔴"
                         if finding.confidence == "HIGH"
                         else "🟡" if finding.confidence == "MEDIUM" else "🟢"
                     )
-                    print(f"    {conf_icon} {finding.confidence}: {finding.field_path}")
-                    print(f"       Matched: {finding.matched[:100]}")
+                    out.write(
+                        f"    {conf_icon} {finding.confidence}: {finding.field_path}\n"
+                    )
+                    out.write(f"       Matched: {finding.matched[:100]}\n")
 
             # Show relevant output snippet
-            print("\n  Output Data Sample:")
+            out.write("\n  Output Data Sample:\n")
             output_str = str(output.get("result", output))
-            print(f"  {output_str[:500]}...")
+            out.write(f"  {output_str[:500]}...\n")
 
-        print()
+    out.write("\n")
+    out.write("=" * 80 + "\n")
+    out.write(f"SUMMARY: {high_risk_count} high-risk tool calls detected\n")
+    out.write("=" * 80 + "\n")
 
-    print("=" * 80)
-    print(f"SUMMARY: {high_risk_count} high-risk tool calls detected")
-    print("=" * 80)
+    # Close the analysis file
+    out.close()
 
 
 # Usage
 if __name__ == "__main__":
-    log_path = "logs/session_ec0c4e57-a8c9-4368-8146-f6016a12819a.json"
-    process_logs(log_path, min_confidence=Confidence.MEDIUM, min_risk_score=2)
+    parser = argparse.ArgumentParser(description="Run log processor for MCPClient.")
+    parser.add_argument(
+        "--id",
+        nargs="+",
+        default=None,
+        help=("Run log processor for specified session by ID."),
+    )
+    args = parser.parse_args()
+    log_path = pathlib.Path("logs") / f"session_{args.id[0]}.json"
+    analysis_path = pathlib.Path("logs") / f"analysis_{args.id[0]}.txt"
+
+    process_logs(
+        log_path,
+        min_confidence=Confidence.MEDIUM,
+        min_risk_score=2,
+        analysis_filepath=analysis_path,
+    )
