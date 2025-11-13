@@ -20,6 +20,7 @@ GOOGLE_GENAI_MODELS = [
 
 class GoogleGenAIProvider(AIProvider):
     """Google Generative AI provider implementation."""
+
     _default_model = GOOGLE_GENAI_MODELS[0]  # gemini-2.5-flash-lite
 
     def __init__(self, **kwargs) -> None:

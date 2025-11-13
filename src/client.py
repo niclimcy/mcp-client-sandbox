@@ -245,7 +245,7 @@ class MCPClient:
             provider_used=provider_name
         )
         print(f"Logging session started: {self.current_session_id}")
-        
+
         # Reset conversation history at the start of a new session
         self.provider.reset_conversation_history()
 
@@ -304,7 +304,7 @@ class MCPClient:
 
                     # Add sleep between prompts to avoid rate limiting (except after the last prompt)
                     if i < len(prompts) - 1:
-                        sleep_duration = int(os.getenv('AI_PROVIDER_RATE_LIMIT', '10'))
+                        sleep_duration = int(os.getenv("AI_PROVIDER_RATE_LIMIT", "10"))
                         print(
                             f"\nWaiting {sleep_duration}s before next prompt to avoid rate limiting..."
                         )

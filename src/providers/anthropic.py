@@ -14,7 +14,8 @@ ANTHROPIC_MODELS = ["claude-haiku-4-5-20251001", "claude-sonnet-4-5-20250929"]
 
 class AnthropicProvider(AIProvider):
     """Anthropic Claude AI provider implementation."""
-    _default_model = ANTHROPIC_MODELS[0] # claude-haiku-4-5-20251001
+
+    _default_model = ANTHROPIC_MODELS[0]  # claude-haiku-4-5-20251001
 
     def __init__(self, **kwargs) -> None:
         """Initialize Anthropic provider."""
@@ -48,7 +49,7 @@ class AnthropicProvider(AIProvider):
             Final response text after processing tool calls
         """
         model = self.current_model or self._default_model
-        
+
         # Start with conversation history and add new user query
         messages = self.conversation_history.copy()
         messages.append({"role": "user", "content": query})

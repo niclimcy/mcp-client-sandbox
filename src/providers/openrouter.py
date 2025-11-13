@@ -20,6 +20,7 @@ OPENROUTER_MODELS: list[str] = []
 
 class OpenRouterProvider(AIProvider):
     """OpenRouter provider implementation using OpenAI SDK."""
+
     _default_model = "z-ai/glm-4.5-air:free"
 
     def __init__(self, **kwargs) -> None:

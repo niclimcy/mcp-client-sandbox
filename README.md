@@ -35,7 +35,7 @@ Run tests with the MCP client using the `--test` flag. You can pass one or more 
 Quick usage:
 
 ```bash
-uv run main.py --test <test_name_1> [<test_name_2> ...]
+uv run src/main.py --test <test_name_1> [<test_name_2> ...]
 ```
 
 Example: the repository includes an example test called `chain_attack_test`. It requires fetching git submodules and building two Node.js-based example MCP servers. Follow the steps below to run it locally.
@@ -78,13 +78,13 @@ SANDBOX_PATH=/absolute/path/to/mcp-client-monitoring/sandbox
 5. Run the example test `chain_attack_test`:
 
 ```bash
-uv run main.py --test chain_attack_test
+uv run src/main.py --test chain_attack_test
 ```
 
 Running multiple tests:
 
 ```bash
-uv run main.py --test chain_attack_test another_test_name
+uv run src/main.py --test chain_attack_test another_test_name
 ```
 
 Troubleshooting & tips
@@ -101,5 +101,5 @@ git submodule update --init --recursive
 Pretty print all logs collected during monitoring sessions:
 
 ```bash
-uv run view_logs.py
+uv run src/view_logs.py
 ```

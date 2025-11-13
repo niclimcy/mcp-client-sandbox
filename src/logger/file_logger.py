@@ -19,8 +19,10 @@ class FileSystemLogger(ToolUsageLogger):
         logs_dir: Directory where log files are stored
         sessions: In-memory cache of active sessions
     """
-    
-    def __init__(self, logs_dir: str = "logs", taint_rule_engine: TaintRuleEngine = None):
+
+    def __init__(
+        self, logs_dir: str = "logs", taint_rule_engine: TaintRuleEngine = None
+    ):
         """Initialize the file system logger.
 
         Args:
@@ -168,7 +170,7 @@ class FileSystemLogger(ToolUsageLogger):
         session = self.sessions.get(self.current_session_id)
         if not session:
             raise ValueError(f"Session {self.current_session_id} not found.")
-        
+
         # Tainting
         taint_result = {
             "input_tainted": False,
