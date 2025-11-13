@@ -158,6 +158,31 @@ class FileSystemLogger(ToolUsageLogger):
 
         return await asyncio.to_thread(_read)
 
+    def _get_taint_info(self, record: ToolCallRecord) -> dict:
+        # Tainting
+        taint_result = {
+            "input_tainted": False,
+            "output_tainted": False,
+            "input_labels": [],
+            "output_labels": [],
+            "taint_flow_detected": False,
+        }
+
+        input_check = self.taint_rule_engine.evaluate(record.input_args)
+        taint_result["input_tainted"] = input_check.tainted
+        taint_result["input_labels"] = [label.name for label in input_check.labels]
+
+        if record.output is not None:
+            output_check = self.taint_rule_engine.evaluate(record.output)
+            taint_result["output_tainted"] = output_check.tainted
+            taint_result["output_labels"] = [
+                label.name for label in output_check.labels
+            ]
+            if input_check.tainted and output_check.tainted:
+                taint_result["taint_flow_detected"] = True
+
+        return taint_result
+
     async def log_tool_call(self, record: ToolCallRecord) -> None:
         """Log a tool call record to the current session.
 
@@ -171,27 +196,9 @@ class FileSystemLogger(ToolUsageLogger):
         if not session:
             raise ValueError(f"Session {self.current_session_id} not found.")
 
-        # Tainting
-        taint_result = {
-            "input_tainted": False,
-            "output_tainted": False,
-            "input_labels": [],
-            "output_labels": [],
-            "taint_flow_detected": False,
-        }
-
-        input_check = self.taint_rule_engine.evaluate(record.input_args)
-        taint_result["input_tainted"] = input_check.tainted
-        taint_result["input_labels"] = [l.name for l in input_check.labels]
-
-        if record.output is not None:
-            output_check = self.taint_rule_engine.evaluate(record.output)
-            taint_result["output_tainted"] = output_check.tainted
-            taint_result["output_labels"] = [l.name for l in output_check.labels]
-            if input_check.tainted and output_check.tainted:
-                taint_result["taint_flow_detected"] = True
-
-        record.taint_info = taint_result
+        # Add taint info to the record
+        taint_info = self._get_taint_info(record)
+        record.taint_info = taint_info
 
         session.add_tool_call(record)
 

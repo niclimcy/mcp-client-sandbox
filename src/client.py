@@ -60,7 +60,8 @@ class MCPClient:
         Get all available models from all providers.
 
         Returns:
-            Dict mapping option number to (provider_class, model_name) or (provider_class, None) for custom
+            Dict mapping option number to (provider_class, model_name)
+            or (provider_class, None) for custom
         """
         models = {}
         option = 1
@@ -132,14 +133,15 @@ class MCPClient:
         self, choice: int, model_string: str | None = None
     ) -> None:
         """
-        Automatically switch model based on an integer choice and optional custom string.
+        Automatically switch model based on  integer choice and optional custom string.
         Used for test mode initialization.
         """
         models = self._get_available_models()
 
         if choice not in models:
             print(
-                f"\n⚠️ WARNING: Invalid model choice '{choice}' found in test data. Using default model."
+                f"\n⚠️ WARNING: Invalid model choice '{choice}' found in test data. "
+                "Using default model."
             )
             return
 
@@ -150,7 +152,8 @@ class MCPClient:
 
             if not final_model_name:
                 print(
-                    f"\n⚠️ WARNING: Model choice '{choice}' is custom, but 'model_string' is empty. Using default model."
+                    f"\n⚠️ WARNING: Model choice '{choice}' is custom, but "
+                    "'model_string' is empty. Using default model."
                 )
                 return
         else:
@@ -160,7 +163,8 @@ class MCPClient:
         self.provider.set_model(final_model_name)
         self.provider.reset_conversation_history()
         print(
-            f"\nModel switched to {final_model_name} ({provider_class.__name__.removesuffix('Provider')}) via test data."
+            f"\nModel switched to {final_model_name} "
+            f"({provider_class.__name__.removesuffix('Provider')}) via test data."
         )
 
     async def _switch_model(self) -> None:
@@ -176,7 +180,8 @@ class MCPClient:
 
             if choice not in models:
                 print(
-                    f"Invalid choice. Please select a number between 1 and {len(models)}"
+                    "Invalid choice. Please select a number between 1 and "
+                    f"{len(models)}"
                 )
                 return
 
@@ -200,7 +205,8 @@ class MCPClient:
             if self.current_session_id:
                 await self.logger.end_session(self.current_session_id)
                 print(
-                    f"Previous session ended. Logs saved to: logs/session_{self.current_session_id}.json"
+                    "Previous session ended. Logs saved to: logs/session_"
+                    f"{self.current_session_id}.json"
                 )
 
             # Create new provider instance and set model
@@ -209,7 +215,8 @@ class MCPClient:
             self.provider.reset_conversation_history()
 
             print(
-                f"\nModel switched to {model_name} ({provider_class.__name__.removesuffix('Provider')})"
+                "\nModel switched to {model_name} "
+                f"({provider_class.__name__.removesuffix('Provider')})"
             )
 
             # Start new logging session with new provider
@@ -226,7 +233,8 @@ class MCPClient:
             context_message = "Test run complete. " if self.is_test_mode else ""
             await self.logger.end_session(self.current_session_id)
             print(
-                f"\n{context_message}Logs saved to: logs/session_{self.current_session_id}.json"
+                f"\n{context_message}Logs saved to: logs/session_"
+                f"{self.current_session_id}.json"
             )
 
             if start_new_session:
@@ -284,11 +292,12 @@ class MCPClient:
 
                 if not prompts:
                     print("⚠️ WARNING: No prompts found in test data.")
-                    # TODO: Consider throwing exception so that the finally block executes and can end logging session.
+                    # TODO: Consider throwing exception so that finally
+                    # block executes and can end logging session.
                     return  # Exit run if no prompts
 
                 for i, query in enumerate(prompts):
-                    print(f"\n[TEST PROMPT {i+1}/{len(prompts)}]: {query[:80]}...")
+                    print(f"\n[TEST PROMPT {i+1}/{len(prompts)}]: {query}")
 
                     try:
                         response = await self._process_query(query)
@@ -298,15 +307,18 @@ class MCPClient:
 
                     except Exception as e:
                         print(
-                            f"🔥 ERROR: Failed to process test prompt {i+1}. Error: {str(e)}"
+                            f"🔥 ERROR: Failed to process test prompt {i+1}. Error: "
+                            f"{str(e)}"
                         )
                         # Continue to the next prompt, don't break the whole test run
 
-                    # Add sleep between prompts to avoid rate limiting (except after the last prompt)
+                    # Add sleep between prompts to avoid rate limiting
+                    # (except after last prompt)
                     if i < len(prompts) - 1:
                         sleep_duration = int(os.getenv("AI_PROVIDER_RATE_LIMIT", "10"))
                         print(
-                            f"\nWaiting {sleep_duration}s before next prompt to avoid rate limiting..."
+                            f"\nWaiting {sleep_duration}s before next prompt to avoid "
+                            "rate limiting..."
                         )
                         await asyncio.sleep(sleep_duration)
 
