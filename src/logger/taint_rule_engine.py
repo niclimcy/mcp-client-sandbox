@@ -36,6 +36,7 @@ class TaintFinding:
             "field_path": self.field_path,
             "label": self.label.name,
             "matched": self.matched,
+            "confidence": self.confidence.name,
         }
 
 
@@ -117,11 +118,6 @@ class TaintRule:
         if self.field_match and not field_path.endswith(self.field_match):
             return findings
 
-        # Check whitelist
-        for wl_item in self.whitelist:
-            if re.search(wl_item, txt):
-                return findings
-
         if self.rule_type == RuleType.EXACT and txt == self.pattern:
             match_found = True
             matched_val = txt
@@ -149,7 +145,20 @@ class TaintRule:
                 matched_val = str(value)
 
         if match_found:
-            findings.append(TaintFinding(field_path, self.label, matched_val))
+            candidate = matched_val if matched_val is not None else txt
+
+            for wl_item in self.whitelist:
+                if re.search(wl_item, candidate):
+                    return findings
+
+            findings.append(
+                TaintFinding(
+                    field_path,
+                    self.label,
+                    candidate,
+                    confidence=self.confidence,
+                )
+            )
         return findings
 
 
