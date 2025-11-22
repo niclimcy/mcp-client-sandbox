@@ -23,3 +23,6 @@ logs/
 
 # Ignore sandbox .env
 !sandbox/.env
+
+# MacOS files
+.DS_Store
