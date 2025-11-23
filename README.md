@@ -1,6 +1,6 @@
-# MCP Client Monitoring
+# MCP Client Sandbox
 
-A monitoring tool for logging MCP server behavior and detecting malicious servers by intercepting all requests in the MCP client.
+A sandbox environment to monitor MCP server behavior and detecting malicious servers by intercepting all requests in the MCP client.
 
 ## Installation
 

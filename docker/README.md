@@ -27,7 +27,7 @@ When running the client container, we mount the host system's Docker socket onto
 Build (from the root folder):
 
 ```bash
-docker build -t mcp-client-monitoring -f ./docker/Dockerfile .
+docker build -t mcp-client-sandbox -f ./docker/Dockerfile .
 ```
 
 Run:
@@ -37,7 +37,7 @@ docker run -d \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v $(pwd):/app \
     -e GOOGLE_API_KEY="<google_api_key>" \
-    mcp-client-monitoring
+    mcp-client-sandbox
 ```
 
 ```bash
